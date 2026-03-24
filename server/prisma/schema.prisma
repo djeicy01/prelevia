@@ -1,0 +1,527 @@
+// ============================================================
+// PRELEVIA — Schéma Prisma Final Consolidé
+// Version 2.0 — Mars 2026
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  COORDINATEUR
+}
+
+enum AgentStatut {
+  ACTIF
+  INACTIF
+  SUSPENDU
+  EN_FORMATION
+}
+
+enum DossierStatut {
+  EN_ATTENTE
+  PRET_PRELEVEMENT
+  PRELEVEMENT_FAIT
+  PAYE
+  RESULTATS_EN_COURS
+  RESULTATS_DISPONIBLES
+  ARCHIVE
+}
+
+enum OcrSource {
+  AUTO
+  PATIENT
+  AGENT
+  MANUAL
+}
+
+enum AssuranceStatut {
+  DOCS_COLLECTES
+  SOUMIS_LABO
+  EN_VALIDATION
+  VALIDE_TOTAL
+  VALIDE_PARTIEL
+  REFUSE
+}
+
+enum MissionStatut {
+  PLANIFIEE
+  EN_ROUTE
+  ARRIVEE
+  PRELEVEMENT_FAIT
+  TERMINEE
+}
+
+enum ModePaiement {
+  CASH
+  ORANGE_MONEY
+  MTN_MONEY
+  WAVE
+  VIREMENT
+}
+
+enum PaiementStatut {
+  EN_ATTENTE
+  CONFIRME
+  ECHEC
+}
+
+enum TypeRevenu {
+  FIXE_MENSUEL
+  PRIME_PRELEVEMENT
+  COMMISSION_ENCAISSEMENT
+  PRIME_QUALITE
+}
+
+enum OrgType {
+  ENTREPRISE
+  INSTITUTION_PUBLIQUE
+  ECOLE
+  MUTUELLE
+  ONG
+  AUTRE
+}
+
+enum CampagneStatut {
+  PLANIFIEE
+  EN_COURS
+  SUSPENDUE
+  TERMINEE
+  ANNULEE
+}
+
+enum Interpretation {
+  NORMAL
+  ELEVE
+  BAS
+  CRITIQUE
+  POSITIF
+  NEGATIF
+  EN_ATTENTE
+}
+
+enum ParamType {
+  TEXTE
+  NOMBRE
+  BOOLEEN
+  JSON
+}
+
+// ============================================================
+// MODELS — ADMINISTRATION
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  nom       String
+  prenom    String
+  role      Role     @default(ADMIN)
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Parametre {
+  id          String    @id @default(cuid())
+  cle         String    @unique
+  valeur      String
+  type        ParamType @default(TEXTE)
+  description String?
+  modifiable  Boolean   @default(true)
+  updatedAt   DateTime  @updatedAt
+}
+
+model TemplateSMS {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  sujet     String
+  contenu   String
+  actif     Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// MODELS — GÉOGRAPHIE
+// ============================================================
+
+model Zone {
+  id               String   @id @default(cuid())
+  nom              String   @unique
+  ville            String   @default("Abidjan")
+  actif            Boolean  @default(true)
+  fraisDeplacement Int      @default(1500)
+  createdAt        DateTime @default(now())
+}
+
+// ============================================================
+// MODELS — LABORATOIRES
+// ============================================================
+
+model Laboratoire {
+  id                 String             @id @default(cuid())
+  nom                String             @unique
+  adresse            String?
+  telephone          String?
+  email              String?
+  valeurB            Int                @default(200)
+  actif              Boolean            @default(true)
+  principal          Boolean            @default(false)
+  dossiers           Dossier[]
+  campagnes          Campagne[]
+  documentsResultats DocumentResultat[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+// ============================================================
+// MODELS — ASSURANCES
+// ============================================================
+
+model Assurance {
+  id              String    @id @default(cuid())
+  nom             String    @unique
+  type            String
+  tauxCouverture  Int
+  delaiValidation String
+  contactEmail    String?
+  contactTel      String?
+  patients        Patient[]
+}
+
+// ============================================================
+// MODELS — CATALOGUE EXAMENS
+// ============================================================
+
+model ExamenCatalogue {
+  id             String        @id @default(cuid())
+  code           String        @unique
+  nom            String        @unique
+  categorie      String
+  valeurB        Int           @default(0)
+  tarifMin       Int
+  tarifMax       Int
+  typesTube      String?
+  description    String?
+  actif          Boolean       @default(true)
+  examens        Examen[]
+  panels         PanelExamen[]
+  tarifsSpeciaux TarifSpecial[]
+}
+
+model TarifSpecial {
+  id          String          @id @default(cuid())
+  catalogueId String
+  catalogue   ExamenCatalogue @relation(fields: [catalogueId], references: [id])
+  contexte    String
+  tarif       Int
+  actif       Boolean         @default(true)
+  dateDebut   DateTime?
+  dateFin     DateTime?
+  createdAt   DateTime        @default(now())
+
+  @@index([catalogueId])
+  @@index([contexte])
+}
+
+// ============================================================
+// MODELS — PANELS D'ANALYSES
+// ============================================================
+
+model Panel {
+  id          String          @id @default(cuid())
+  code        String          @unique
+  nom         String          @unique
+  description String?
+  categorie   String
+  actif       Boolean         @default(true)
+  examens     PanelExamen[]
+  campagnes   CampagnePanel[]
+  createdAt   DateTime        @default(now())
+}
+
+model PanelExamen {
+  id          String          @id @default(cuid())
+  panelId     String
+  panel       Panel           @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  catalogueId String
+  catalogue   ExamenCatalogue @relation(fields: [catalogueId], references: [id])
+  ordre       Int             @default(0)
+
+  @@unique([panelId, catalogueId])
+}
+
+// ============================================================
+// MODELS — PATIENTS
+// ============================================================
+
+model Patient {
+  id          String           @id @default(cuid())
+  ref         String           @unique
+  nom         String
+  prenom      String
+  telephone   String
+  commune     String
+  adresse     String?
+  assuranceId String?
+  assurance   Assurance?       @relation(fields: [assuranceId], references: [id])
+  numCarte    String?
+  dossiers    Dossier[]
+  resultats   ResultatExamen[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([telephone])
+  @@index([commune])
+}
+
+// ============================================================
+// MODELS — DOSSIERS
+// ============================================================
+
+model Dossier {
+  id                 String             @id @default(cuid())
+  ref                String             @unique
+  patientId          String
+  patient            Patient            @relation(fields: [patientId], references: [id])
+  statut             DossierStatut      @default(EN_ATTENTE)
+  statutAssurance    AssuranceStatut?
+  ocrSource          OcrSource          @default(MANUAL)
+  bulletinUrl        String?
+  carteAssuranceUrl  String?
+  cniUrl             String?
+  noteAdmin          String?
+  examens            Examen[]
+  paiements          Paiement[]
+  documentsResultats DocumentResultat[]
+  missionId          String?
+  mission            Mission?           @relation(fields: [missionId], references: [id])
+  laboratoireId      String?
+  laboratoire        Laboratoire?       @relation(fields: [laboratoireId], references: [id])
+  campagneId         String?
+  campagne           Campagne?          @relation(fields: [campagneId], references: [id])
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([patientId])
+  @@index([statut])
+  @@index([statutAssurance])
+  @@index([campagneId])
+}
+
+model Examen {
+  id          String           @id @default(cuid())
+  dossierId   String
+  dossier     Dossier          @relation(fields: [dossierId], references: [id],onDelete: Cascade)
+  catalogueId String
+  catalogue   ExamenCatalogue  @relation(fields: [catalogueId], references: [id])
+  tarif       Int
+  couvert     Boolean?
+  quotePart   Int?
+  resultat    ResultatExamen?
+
+  @@index([dossierId])
+}
+
+// ============================================================
+// MODELS — RÉSULTATS
+// ============================================================
+
+model ResultatExamen {
+  id             String         @id @default(cuid())
+  examenId       String         @unique
+  examen         Examen         @relation(fields: [examenId], references: [id],onDelete: Cascade)
+  patientId      String
+  patient        Patient        @relation(fields: [patientId], references: [id])
+  valeur         String
+  unite          String?
+  normaleMin     String?
+  normaleMax     String?
+  interpretation Interpretation @default(EN_ATTENTE)
+  commentaire    String?
+  saisiPar       String
+  saisiLe        DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([patientId])
+}
+
+model DocumentResultat {
+  id                String       @id @default(cuid())
+  dossierId         String
+  dossier           Dossier      @relation(fields: [dossierId], references: [id],onDelete: Restrict)
+  fileUrl           String
+  fileName          String
+  fileSizeKb        Int?
+  laboratoireId     String?
+  laboratoire       Laboratoire? @relation(fields: [laboratoireId], references: [id])
+  uploadePar        String
+  uploadeA          DateTime     @default(now())
+  notifiePatient    Boolean      @default(false)
+  notifieA          DateTime?
+  accessiblePatient Boolean      @default(true)
+  version           Int          @default(1)
+  createdAt         DateTime     @default(now())
+
+  @@index([dossierId])
+}
+
+// ============================================================
+// MODELS — AGENTS & MISSIONS
+// ============================================================
+
+model Agent {
+  id             String         @id @default(cuid())
+  nom            String
+  prenom         String
+  telephone      String         @unique
+  email          String?
+  commune        String
+  statut         AgentStatut    @default(ACTIF)
+  tauxCommission Float          @default(0.15)
+  missions       Mission[]
+  stocks         StockAgent[]
+  revenus        Revenu[]
+  campagnes      CampagneAgent[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Mission {
+  id        String        @id @default(cuid())
+  ref       String        @unique
+  agentId   String
+  agent     Agent         @relation(fields: [agentId], references: [id])
+  dossiers  Dossier[]
+  revenus   Revenu[]
+  date      DateTime
+  statut    MissionStatut @default(PLANIFIEE)
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([agentId])
+  @@index([date])
+}
+
+model StockAgent {
+  id          String   @id @default(cuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  materiau    String
+  quantite    Int
+  seuilAlerte Int      @default(10)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([agentId, materiau])
+}
+
+model Revenu {
+  id        String     @id @default(cuid())
+  agentId   String
+  agent     Agent      @relation(fields: [agentId], references: [id])
+  missionId String?
+  mission   Mission?   @relation(fields: [missionId], references: [id])
+  montant   Int
+  type      TypeRevenu
+  date      DateTime   @default(now())
+
+  @@index([agentId])
+  @@index([date])
+}
+
+// ============================================================
+// MODELS — PAIEMENTS
+// ============================================================
+
+model Paiement {
+  id        String         @id @default(cuid())
+  dossierId String
+  dossier   Dossier        @relation(fields: [dossierId], references: [id])
+  montant   Int
+  mode      ModePaiement
+  statut    PaiementStatut @default(EN_ATTENTE)
+  reference String?
+  encaisseA DateTime?
+  createdAt DateTime       @default(now())
+
+  @@index([dossierId])
+  @@index([encaisseA])
+}
+
+// ============================================================
+// MODELS — CAMPAGNES DE MASSE
+// ============================================================
+
+model Organisation {
+  id         String     @id @default(cuid())
+  nom        String     @unique
+  type       OrgType
+  telephone  String?
+  email      String?
+  adresse    String?
+  commune    String?
+  contactNom String?
+  campagnes  Campagne[]
+  createdAt  DateTime   @default(now())
+}
+
+model Campagne {
+  id               String          @id @default(cuid())
+  ref              String          @unique
+  nom              String
+  organisationId   String
+  organisation     Organisation    @relation(fields: [organisationId], references: [id])
+  laboratoireId    String?
+  laboratoire      Laboratoire?    @relation(fields: [laboratoireId], references: [id])
+  dateDebut        DateTime
+  dateFin          DateTime
+  nbPersonnesCible Int
+  nbPersonnesFait  Int             @default(0)
+  tarifNegocieB    Int?
+  remisePct        Int             @default(0)
+  statut           CampagneStatut  @default(PLANIFIEE)
+  noteAdmin        String?
+  panels           CampagnePanel[]
+  dossiers         Dossier[]
+  agents           CampagneAgent[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([organisationId])
+  @@index([statut])
+}
+
+model CampagnePanel {
+  id         String   @id @default(cuid())
+  campagneId String
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Cascade)
+  panelId    String
+  panel      Panel    @relation(fields: [panelId], references: [id])
+
+  @@unique([campagneId, panelId])
+}
+
+model CampagneAgent {
+  id         String   @id @default(cuid())
+  campagneId String
+  campagne   Campagne @relation(fields: [campagneId], references: [id], onDelete: Cascade)
+  agentId    String
+  agent      Agent    @relation(fields: [agentId], references: [id])
+  role       String   @default("PRELEVEUR")
+
+  @@unique([campagneId, agentId])
+}
