@@ -133,10 +133,10 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     res.json({
       ...agent,
       stats: {
-        revenuTotal:       revenuTotal._sum.montant ?? 0,
+        revenuTotal:     revenuTotal._sum.montant ?? 0,
         revenuMoisEnCours: revenuMois._sum.montant ?? 0,
-        nbMissions:        agent.missions.length,
-        stocksEnAlerte:    agent.stocks.filter(s => s.quantite <= s.seuilAlerte).length,
+        nbMissions:      agent.missions.length,
+        stocksEnAlerte:  agent.stocks.filter(s => s.quantite <= s.seuilAlerte).length,
       },
     })
   } catch (err) {
@@ -197,12 +197,12 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     }
 
     const data: any = {}
-    if (nom            !== undefined) data.nom            = nom
-    if (prenom         !== undefined) data.prenom         = prenom
-    if (telephone      !== undefined) data.telephone      = telephone
-    if (email          !== undefined) data.email          = email
-    if (commune        !== undefined) data.commune        = commune
-    if (statut         !== undefined) data.statut         = statut
+    if (nom           !== undefined) data.nom           = nom
+    if (prenom        !== undefined) data.prenom        = prenom
+    if (telephone     !== undefined) data.telephone     = telephone
+    if (email         !== undefined) data.email         = email
+    if (commune       !== undefined) data.commune       = commune
+    if (statut        !== undefined) data.statut        = statut
     if (tauxCommission !== undefined) data.tauxCommission = tauxCommission
 
     if (Object.keys(data).length === 0) {
@@ -241,10 +241,10 @@ router.get('/:id/stock', async (req: AuthRequest, res: Response) => {
     })
 
     res.json({
-      agentId:  agent.id,
-      agentNom: `${agent.prenom} ${agent.nom}`,
+      agentId:    agent.id,
+      agentNom:   `${agent.prenom} ${agent.nom}`,
       stocks,
-      alertes:  stocks.filter(s => s.quantite <= s.seuilAlerte),
+      alertes:    stocks.filter(s => s.quantite <= s.seuilAlerte),
     })
   } catch (err) {
     console.error(err)
@@ -340,7 +340,9 @@ router.get('/:id/revenus', async (req: AuthRequest, res: Response) => {
       prisma.revenu.findMany({
         where,
         include: {
-          mission: { select: { ref: true, date: true, statut: true } },
+          mission: {
+            select: { ref: true, date: true, statut: true },
+          },
         },
         orderBy: { date: 'desc' },
         skip,
@@ -351,10 +353,10 @@ router.get('/:id/revenus', async (req: AuthRequest, res: Response) => {
     ])
 
     res.json({
-      data:         revenus,
+      data:       revenus,
       total,
-      page:         Number(page),
-      pages:        Math.ceil(total / Number(limit)),
+      page:       Number(page),
+      pages:      Math.ceil(total / Number(limit)),
       totalMontant: agregat._sum.montant ?? 0,
     })
   } catch (err) {
