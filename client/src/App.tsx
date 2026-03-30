@@ -10,6 +10,7 @@ import Agents     from './pages/Agents'
 import Missions   from './pages/Missions'
 import Stock      from './pages/Stock'
 import Rapports   from './pages/Rapports'
+import Parametres from './pages/Parametres'
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="missions"   element={<Missions />} />
             <Route path="stock"      element={<Stock />} />
             <Route path="rapports"   element={<Rapports />} />
+            <Route path="parametres" element={<Parametres />} />
           </Route>
         </Route>
       </Routes>
