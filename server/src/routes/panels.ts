@@ -29,7 +29,7 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const panel = await prisma.panel.findUnique({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       include: INCLUDE_EXAMENS,
     })
     if (!panel) return res.status(404).json({ error: 'Panel introuvable' })
@@ -76,7 +76,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     if (actif       !== undefined) data.actif       = actif
 
     const panel = await prisma.panel.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data,
       include: INCLUDE_EXAMENS,
     })
@@ -90,7 +90,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 // ─── PUT /api/panels/:id/examens ─────────────────────────────
 router.put('/:id/examens', async (req: AuthRequest, res: Response) => {
   try {
-    const panelId = req.params.id
+    const panelId = String(req.params.id)
     const catalogueIds: string[] = req.body.catalogueIds ?? []
 
     await prisma.$transaction([
