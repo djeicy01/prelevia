@@ -94,14 +94,14 @@ router.put('/:id/examens', async (req: AuthRequest, res: Response) => {
     const catalogueIds: string[] = req.body.catalogueIds ?? []
 
     await prisma.$transaction([
-      prisma.panelExamen.deleteMany({ where: { panelId } }),
+      prisma.panelExamen.deleteMany({ where: { panelId: String(panelId) } }),
       prisma.panelExamen.createMany({
-        data: catalogueIds.map((id, i) => ({ panelId, catalogueId: id, ordre: i })),
+        data: catalogueIds.map((id, i) => ({ panelId: String(panelId), catalogueId: id, ordre: i })),
       }),
     ])
 
     const panel = await prisma.panel.findUnique({
-      where: { id: panelId },
+      where: { id: String(panelId) },
       include: INCLUDE_EXAMENS,
     })
     res.json(panel)
