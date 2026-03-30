@@ -274,19 +274,11 @@ router.get('/examens', async (req: AuthRequest, res: Response) => {
 // Répartition des patients et dossiers par commune.
 router.get('/communes', async (req: AuthRequest, res: Response) => {
   try {
-    const [patientsParCommune, dossiersParCommune] = await Promise.all([
-      prisma.patient.groupBy({
-        by:     ['commune'],
-        _count: { _all: true },
-        orderBy: { _count: { commune: 'desc' } },
-      }),
-      prisma.dossier.groupBy({
-        by: ['patient'],
-        // Grouper sur la commune du patient via une jointure manuelle
-        // (Prisma ne supporte pas groupBy sur relation — on fait via raw ou agrégat patient)
-        _count: { _all: true },
-      }),
-    ])
+    const patientsParCommune = await prisma.patient.groupBy({
+      by:      ['commune'],
+      _count:  { _all: true },
+      orderBy: { _count: { commune: 'desc' } },
+    })
 
     // Pour les dossiers par commune, on passe par les patients
     const patientIds = await prisma.patient.findMany({
