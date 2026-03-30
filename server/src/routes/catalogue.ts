@@ -72,7 +72,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
       data.tarifMin = Math.round((data.tarifMax as number) * 0.9)
     }
 
-    const examen = await prisma.examenCatalogue.update({ where: { id: req.params.id }, data })
+    const examen = await prisma.examenCatalogue.update({ where: { id: String(req.params.id) }, data })
     res.json(examen)
   } catch (err: any) {
     if (err.code === 'P2025') return res.status(404).json({ error: 'Examen introuvable' })
