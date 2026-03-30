@@ -11,6 +11,10 @@ const NAV = [
   { to: '/rapports',   icon: '📈', label: 'Rapports' },
 ]
 
+const NAV_BOTTOM = [
+  { to: '/parametres', icon: '⚙️', label: 'Paramètres' },
+]
+
 export default function Sidebar() {
   return (
     <aside className="fixed top-0 left-0 bottom-0 w-[255px] flex flex-col z-40"
@@ -35,7 +39,7 @@ export default function Sidebar() {
         Labo Maison Blanche · Yopougon
       </div>
 
-      {/* Navigation */}
+      {/* Navigation principale */}
       <nav className="flex-1 px-2.5 py-2 overflow-y-auto space-y-0.5">
         {NAV.map(item => (
           <NavLink
@@ -54,6 +58,25 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* Navigation bas — Paramètres */}
+      <div className="px-2.5 pb-2 border-t border-white/10 pt-2">
+        {NAV_BOTTOM.map(item => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center gap-2.5 px-3 py-2.5 rounded-[9px] text-[13px] font-medium transition-all duration-150 ` +
+              (isActive
+                ? 'text-white bg-[#0A6E5C]'
+                : 'text-white/55 hover:text-white hover:bg-white/7')
+            }
+          >
+            <span className="text-[17px] w-5 text-center">{item.icon}</span>
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
 
       {/* Footer utilisateur */}
       <div className="p-3 border-t border-white/10">
