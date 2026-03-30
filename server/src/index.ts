@@ -11,8 +11,9 @@ app.use(cors())
 app.use(express.json({ limit: '10mb' }))
 
 // ─── ROUTES ───────────────────────────────────────────────
-import authRoutes      from './routes/auth'
-import patientsRoutes  from './routes/patients'
+import authRoutes       from './routes/auth'
+import assurancesRoutes from './routes/assurances'
+import patientsRoutes   from './routes/patients'
 import dossiersRoutes  from './routes/dossiers'
 import agentsRoutes    from './routes/agents'
 import missionsRoutes  from './routes/missions'
@@ -22,8 +23,9 @@ import panelsRoutes    from './routes/panels'
 import parametresRoutes from './routes/parametres'
 import rapportsRoutes  from './routes/rapports'
 
-app.use('/api/auth',       authRoutes)
-app.use('/api/patients',   patientsRoutes)
+app.use('/api/auth',        authRoutes)
+app.use('/api/assurances',  assurancesRoutes)
+app.use('/api/patients',    patientsRoutes)
 app.use('/api/dossiers',   dossiersRoutes)
 app.use('/api/agents',     agentsRoutes)
 app.use('/api/missions',   missionsRoutes)
