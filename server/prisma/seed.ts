@@ -316,6 +316,114 @@ async function main() {
     console.log('✅ Stock initial créé')
   }
 
+  // ─── 12. PATIENTS & DOSSIERS DE DÉMONSTRATION ──────────
+  const mugefci  = await prisma.assurance.findUnique({ where: { nom: 'MUGEFCI'   } })
+  const cnps     = await prisma.assurance.findUnique({ where: { nom: 'CNPS'      } })
+  const sanlam   = await prisma.assurance.findUnique({ where: { nom: 'Sanlam CI' } })
+
+  // Helper : récupère l'id d'un examen catalogue par code
+  async function catId(code: string) {
+    const e = await prisma.examenCatalogue.findUnique({ where: { code } })
+    return e?.id ?? null
+  }
+
+  const patientsDemo = [
+    {
+      ref: 'PAT-2026-00001', nom: 'Kouassi', prenom: 'Ama',
+      telephone: '0707070707', commune: 'Yopougon',
+      assuranceId: mugefci?.id,
+      dossierRef: 'DOS-2026-00001', statut: 'EN_ATTENTE'       as const,
+      statutAssurance: 'VALIDE_TOTAL'  as const,
+      ocrSource: 'AUTO'    as const,
+      examCodes: ['NFS', 'GLY', 'CRE'],
+    },
+    {
+      ref: 'PAT-2026-00002', nom: 'Diallo', prenom: 'Moussa',
+      telephone: '0505050505', commune: 'Yopougon',
+      assuranceId: undefined,
+      dossierRef: 'DOS-2026-00002', statut: 'PRET_PRELEVEMENT' as const,
+      statutAssurance: null,
+      ocrSource: 'PATIENT' as const,
+      examCodes: ['TSH', 'T4L'],
+    },
+    {
+      ref: 'PAT-2026-00003', nom: 'Traoré', prenom: 'Fatou',
+      telephone: '0101010101', commune: 'Yopougon',
+      assuranceId: cnps?.id,
+      dossierRef: 'DOS-2026-00003', statut: 'PRELEVEMENT_FAIT' as const,
+      statutAssurance: 'EN_VALIDATION' as const,
+      ocrSource: 'AUTO'    as const,
+      examCodes: ['NFS', 'HIV', 'AGBS'],
+    },
+    {
+      ref: 'PAT-2026-00004', nom: 'Koné', prenom: 'Ibrahim',
+      telephone: '0909090909', commune: 'Yopougon',
+      assuranceId: undefined,
+      dossierRef: 'DOS-2026-00004', statut: 'EN_ATTENTE'       as const,
+      statutAssurance: null,
+      ocrSource: 'AGENT'   as const,
+      examCodes: ['GLY', 'HBA'],
+    },
+    {
+      ref: 'PAT-2026-00005', nom: 'Bamba', prenom: 'Adjoua',
+      telephone: '0303030303', commune: 'Yopougon',
+      assuranceId: sanlam?.id,
+      dossierRef: 'DOS-2026-00005', statut: 'PAYE'             as const,
+      statutAssurance: 'VALIDE_PARTIEL' as const,
+      ocrSource: 'AUTO'    as const,
+      examCodes: ['FSH', 'EST', 'PRG'],
+    },
+  ]
+
+  for (const p of patientsDemo) {
+    // Upsert patient
+    const patient = await prisma.patient.upsert({
+      where:  { ref: p.ref },
+      update: {},
+      create: {
+        ref:         p.ref,
+        nom:         p.nom,
+        prenom:      p.prenom,
+        telephone:   p.telephone,
+        commune:     p.commune,
+        ...(p.assuranceId ? { assuranceId: p.assuranceId } : {}),
+      },
+    })
+
+    // Upsert dossier
+    const dossier = await prisma.dossier.upsert({
+      where:  { ref: p.dossierRef },
+      update: {},
+      create: {
+        ref:             p.dossierRef,
+        patientId:       patient.id,
+        statut:          p.statut,
+        statutAssurance: p.statutAssurance,
+        ocrSource:       p.ocrSource,
+      },
+    })
+
+    // Ajouter les examens seulement si le dossier n'en a pas encore
+    const existingCount = await prisma.examen.count({ where: { dossierId: dossier.id } })
+    if (existingCount === 0) {
+      for (const code of p.examCodes) {
+        const cId = await catId(code)
+        if (!cId) continue
+        const catalogue = await prisma.examenCatalogue.findUnique({ where: { id: cId } })
+        if (!catalogue) continue
+        await prisma.examen.create({
+          data: {
+            dossierId:   dossier.id,
+            catalogueId: cId,
+            tarif:       catalogue.tarifMax,
+            couvert:     p.assuranceId ? true : false,
+          },
+        })
+      }
+    }
+  }
+  console.log('✅ 5 patients et 5 dossiers de démonstration créés')
+
   console.log('')
   console.log('🎉 Seed terminé avec succès !')
   console.log('   → 1 compte admin  (admin@prelevia.ci / Admin2026!)')
@@ -329,6 +437,7 @@ async function main() {
   console.log('   → 13 panels d\'analyses')
   console.log('   → 3 organisations')
   console.log('   → 8 articles de stock')
+  console.log('   → 5 patients + 5 dossiers de démonstration')
 }
 
 main()
