@@ -85,7 +85,7 @@ router.patch('/templates-sms/:code', async (req: AuthRequest, res: Response) => 
     if (contenu !== undefined) data.contenu = contenu
     if (actif   !== undefined) data.actif   = actif
 
-    const tpl = await prisma.templateSMS.update({ where: { code: req.params.code }, data })
+    const tpl = await prisma.templateSMS.update({ where: { code: String(req.params.code) }, data })
     res.json(tpl)
   } catch (err: any) {
     if (err.code === 'P2025') return res.status(404).json({ error: 'Template introuvable' })
@@ -109,7 +109,7 @@ router.patch('/:cle', async (req: AuthRequest, res: Response) => {
   try {
     const { valeur } = req.body
     const param = await prisma.parametre.update({
-      where: { cle: req.params.cle },
+      where: { cle: String(req.params.cle) },
       data: { valeur: String(valeur) }
     })
     res.json(param)
