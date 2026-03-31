@@ -448,10 +448,80 @@ async function main() {
   }
   console.log('✅ 5 patients et 5 dossiers de démonstration créés')
 
+  // ─── 13. MISSIONS DE TEST ───────────────────────────────
+  const agentBernard = await prisma.agent.findUnique({ where: { telephone: '+225 07 00 00 00' } })
+  const agentFatou   = await prisma.agent.findUnique({ where: { telephone: '+225 0102030405' } })
+
+  // 4ème agent pour les missions si absent
+  const agentSaffo = await prisma.agent.upsert({
+    where:  { telephone: '+225 0708090001' },
+    update: {},
+    create: {
+      nom:            'Saffo',
+      prenom:         'Jean Claude',
+      telephone:      '+225 0708090001',
+      commune:        'Yopougon',
+      statut:         'ACTIF',
+      tauxCommission: 0.15,
+    }
+  })
+
+  const dossMoussa  = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00002' } })
+  const dossFatou   = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00003' } })
+  const dossAdjoua  = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00005' } })
+
+  const today     = new Date()
+  const yesterday = new Date(Date.now() - 86_400_000)
+
+  const missions = [
+    {
+      ref:     'MIS-2026-00001',
+      agentId: agentBernard!.id,
+      dossier: dossMoussa,
+      statut:  'PLANIFIEE' as const,
+      date:    today,
+    },
+    {
+      ref:     'MIS-2026-00002',
+      agentId: agentFatou!.id,
+      dossier: dossFatou,
+      statut:  'EN_ROUTE' as const,
+      date:    today,
+    },
+    {
+      ref:     'MIS-2026-00003',
+      agentId: agentSaffo.id,
+      dossier: dossAdjoua,
+      statut:  'TERMINEE' as const,
+      date:    yesterday,
+    },
+  ]
+
+  for (const m of missions) {
+    const mission = await prisma.mission.upsert({
+      where:  { ref: m.ref },
+      update: { statut: m.statut },
+      create: {
+        ref:     m.ref,
+        agentId: m.agentId,
+        date:    m.date,
+        statut:  m.statut,
+      },
+    })
+    // Lier le dossier à la mission si pas encore lié
+    if (m.dossier && !m.dossier.missionId) {
+      await prisma.dossier.update({
+        where: { id: m.dossier.id },
+        data:  { missionId: mission.id },
+      })
+    }
+  }
+  console.log('✅ 3 missions de test créées')
+
   console.log('')
   console.log('🎉 Seed terminé avec succès !')
   console.log('   → 1 compte admin  (admin@prelevia.ci / Admin2026!)')
-  console.log('   → 3 agents (Kouassi Bernard, Diallo Fatou, Traoré Moussa)')
+  console.log('   → 4 agents (Kouassi Bernard, Diallo Fatou, Traoré Moussa, Saffo Jean Claude)')
   console.log('   → 5 assureurs')
   console.log('   → 1 laboratoire')
   console.log('   → 7 paramètres système')
@@ -462,6 +532,7 @@ async function main() {
   console.log('   → 3 organisations')
   console.log('   → 8 articles de stock')
   console.log('   → 5 patients + 5 dossiers de démonstration')
+  console.log('   → 3 missions de test')
 }
 
 main()
