@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Topbar from '../components/layout/Topbar'
 import Spinner from '../components/ui/Spinner'
 import { BadgeDossier, BadgeAssurance, BadgeOcr } from '../components/ui/Badge'
@@ -215,6 +216,7 @@ export default function Patients() {
   const [loading, setLoading]       = useState(true)
   const [showModal, setShowModal]   = useState(false)
   const [assurances, setAssurances] = useState<Assurance[]>([])
+  const navigate = useNavigate()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -299,7 +301,9 @@ export default function Patients() {
                 </thead>
                 <tbody>
                   {dossiers.map(d => (
-                    <tr key={d.id} className="border-t hover:bg-[#F5F7F6]/50 transition-colors"
+                    <tr key={d.id}
+                        onClick={() => navigate(`/patients/${d.id}`)}
+                        className="border-t hover:bg-[#F5F7F6]/50 transition-colors cursor-pointer"
                         style={{ borderColor: '#D4E5E1' }}>
                       <td className="px-4 py-3 text-[12px] font-mono font-semibold" style={{ color: '#0A6E5C' }}>
                         {d.ref}
