@@ -12,6 +12,7 @@ import Stock      from './pages/Stock'
 import Rapports     from './pages/Rapports'
 import Parametres   from './pages/Parametres'
 import PatientDetail from './pages/PatientDetail'
+import MissionDetail from './pages/MissionDetail'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="paiements"  element={<Paiements />} />
             <Route path="agents"     element={<Agents />} />
             <Route path="missions"   element={<Missions />} />
+            <Route path="missions/:id" element={<MissionDetail />} />
             <Route path="stock"      element={<Stock />} />
             <Route path="rapports"   element={<Rapports />} />
             <Route path="parametres" element={<Parametres />} />
