@@ -162,9 +162,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Patient introuvable' })
     }
 
-    // Générer la référence DOS-XXX
+    // Générer la référence DOS-YYYY-NNNNN
     const count = await prisma.dossier.count()
-    const ref   = `DOS-${String(count + 1).padStart(3, '0')}`
+    const year  = new Date().getFullYear()
+    const ref   = `DOS-${year}-${String(count + 1).padStart(5, '0')}`
 
     // Récupérer les tarifs des examens demandés
     let examensData: { catalogueId: string; tarif: number }[] = []
