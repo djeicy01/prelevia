@@ -22,20 +22,44 @@ async function main() {
   })
   console.log('✅ Compte admin créé  →  admin@prelevia.ci / Admin2026!')
 
-  // ─── 2. AGENT (VOUS) ────────────────────────────────────
+  // ─── 2. AGENTS ──────────────────────────────────────────────
   await prisma.agent.upsert({
     where:  { telephone: '+225 07 00 00 00' },
-    update: {},
+    update: { nom: 'Kouassi', prenom: 'Bernard' },
     create: {
-      nom:            'Votre Nom',
-      prenom:         'Votre Prénom',
+      nom:            'Kouassi',
+      prenom:         'Bernard',
       telephone:      '+225 07 00 00 00',
       commune:        'Yopougon',
       statut:         'ACTIF',
       tauxCommission: 0.15,
     }
   })
-  console.log('✅ Agent créé')
+  await prisma.agent.upsert({
+    where:  { telephone: '+225 0102030405' },
+    update: {},
+    create: {
+      nom:            'Diallo',
+      prenom:         'Fatou',
+      telephone:      '+225 0102030405',
+      commune:        'Yopougon',
+      statut:         'ACTIF',
+      tauxCommission: 0.15,
+    }
+  })
+  await prisma.agent.upsert({
+    where:  { telephone: '+225 0506070809' },
+    update: {},
+    create: {
+      nom:            'Traoré',
+      prenom:         'Moussa',
+      telephone:      '+225 0506070809',
+      commune:        'Yopougon',
+      statut:         'ACTIF',
+      tauxCommission: 0.15,
+    }
+  })
+  console.log('✅ 3 agents créés')
 
   // ─── 3. ASSUREURS ───────────────────────────────────────
   const assureurs = [
@@ -427,7 +451,7 @@ async function main() {
   console.log('')
   console.log('🎉 Seed terminé avec succès !')
   console.log('   → 1 compte admin  (admin@prelevia.ci / Admin2026!)')
-  console.log('   → 1 agent')
+  console.log('   → 3 agents (Kouassi Bernard, Diallo Fatou, Traoré Moussa)')
   console.log('   → 5 assureurs')
   console.log('   → 1 laboratoire')
   console.log('   → 7 paramètres système')
