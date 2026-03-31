@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Topbar from '../components/layout/Topbar'
 import Spinner from '../components/ui/Spinner'
 import { BadgeMission } from '../components/ui/Badge'
@@ -11,6 +12,7 @@ export default function Missions() {
   const [filter, setFilter]     = useState<MissionStatut | ''>('')
   const [loading, setLoading]   = useState(true)
   const [advancing, setAdvancing] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -81,7 +83,9 @@ export default function Missions() {
               </thead>
               <tbody>
                 {missions.map(m => (
-                  <tr key={m.id} className="border-t hover:bg-[#F5F7F6]/50"
+                  <tr key={m.id}
+                      onClick={e => { if ((e.target as HTMLElement).tagName !== 'BUTTON') navigate(`/missions/${m.id}`) }}
+                      className="border-t hover:bg-[#F5F7F6]/50 cursor-pointer"
                       style={{ borderColor: '#D4E5E1' }}>
                     <td className="px-4 py-3 text-[12px] font-mono font-semibold" style={{ color: '#0A6E5C' }}>
                       {m.ref}
