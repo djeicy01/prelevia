@@ -22,11 +22,25 @@ export default function Missions() {
   useEffect(() => { load() }, [load])
 
   const avancer = async (mission: Mission) => {
-    if (!mission.transitionsAutorisees?.length) return
-    const next = mission.transitionsAutorisees[0]
+    const next: Partial<Record<MissionStatut, MissionStatut>> = {
+      PLANIFIEE:       'EN_ROUTE',
+      EN_ROUTE:        'ARRIVEE',
+      ARRIVEE:         'PRELEVEMENT_FAIT',
+      PRELEVEMENT_FAIT:'TERMINEE',
+    }
+    const cible = next[mission.statut]
+    if (!cible) return
     setAdvancing(mission.id)
-    try { await missionsService.updateStatut(mission.id, next); load() }
+    try { await missionsService.updateStatut(mission.id, cible); load() }
     finally { setAdvancing(null) }
+  }
+
+  const ACTION: Record<MissionStatut, { label: string; bg: string } | null> = {
+    PLANIFIEE:        { label: '→ En route',         bg: '#3B82F6' },
+    EN_ROUTE:         { label: '→ Arrivée',           bg: '#F97316' },
+    ARRIVEE:          { label: '→ Prélèvement fait',  bg: '#F97316' },
+    PRELEVEMENT_FAIT: { label: '→ Terminer',          bg: '#2CB67D' },
+    TERMINEE:         null,
   }
 
   return (
@@ -89,16 +103,20 @@ export default function Missions() {
                       {m.finances ? `${m.finances.totalPatient.toLocaleString('fr-FR')} XOF` : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      {m.transitionsAutorisees && m.transitionsAutorisees.length > 0 && (
+                      {ACTION[m.statut] ? (
                         <button
                           onClick={() => avancer(m)}
                           disabled={advancing === m.id}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white"
-                          style={{ background: '#0A6E5C' }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-60"
+                          style={{ background: ACTION[m.statut]!.bg }}
                         >
-                          {advancing === m.id ? <Spinner size={12} /> : '→'}
-                          {m.transitionsAutorisees[0].replace(/_/g, ' ')}
+                          {advancing === m.id ? <Spinner size={12} /> : ACTION[m.statut]!.label}
                         </button>
+                      ) : (
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: '#F3F4F6', color: '#6B7280' }}>
+                          Terminée
+                        </span>
                       )}
                     </td>
                   </tr>
