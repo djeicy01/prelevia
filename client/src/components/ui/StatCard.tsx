@@ -1,5 +1,5 @@
 interface Props {
-  icon:    string
+  icon:    React.ReactNode
   label:   string
   value:   string | number
   sub?:    string
