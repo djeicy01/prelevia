@@ -256,13 +256,15 @@ export default function PatientDetail() {
         <div className="flex items-center gap-2">
           {dossier.statut === 'EN_ATTENTE' && (
             <button
+              disabled={examens.length === 0}
+              title={examens.length === 0 ? 'Ajoutez des examens avant de marquer le dossier comme prêt' : undefined}
               onClick={async () => {
                 await dossiersService.update(dossier.id, { statut: 'PRET_PRELEVEMENT' as DossierStatut })
                 load()
                 showMsg('Dossier marqué prêt pour prélèvement')
               }}
-              className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
-              style={{ background: P }}>
+              className="text-sm font-semibold px-4 py-2 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: examens.length === 0 ? '#9CA3AF' : P }}>
               Marquer prêt
             </button>
           )}
