@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom'
+import { Users, FlaskConical } from 'lucide-react'
 
-const NAV = [
+const NAV: { to: string; icon: React.ReactNode; label: string }[] = [
   { to: '/',           icon: '📊', label: 'Tableau de bord' },
-  { to: '/patients',   icon: '🧬', label: 'Dossiers patients' },
+  { to: '/patients',   icon: <Users size={17} />,        label: 'Dossiers patients' },
   { to: '/assurances', icon: '🛡️', label: 'Assurances' },
   { to: '/paiements',  icon: '💳', label: 'Paiements' },
   { to: '/agents',     icon: '🏍️', label: 'Agents' },
   { to: '/missions',   icon: '📍', label: 'Missions' },
-  { to: '/stock',      icon: '🧪', label: 'Stock matériel' },
+  { to: '/stock',      icon: <FlaskConical size={17} />, label: 'Stock matériel' },
   { to: '/rapports',   icon: '📈', label: 'Rapports' },
 ]
 
