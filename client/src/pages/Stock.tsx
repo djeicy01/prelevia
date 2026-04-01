@@ -4,6 +4,11 @@ import Spinner from '../components/ui/Spinner'
 import { agentsService } from '../services/agents'
 import type { Agent, StockAgent } from '../types'
 
+// "AIGUILLES_21G" → "Aiguilles 21G"
+function formatMateriau(s: string): string {
+  return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
 function StockBar({ quantite, max }: { quantite: number; max: number }) {
   const pct   = Math.min(100, Math.round((quantite / max) * 100))
   const color = pct > 50 ? '#2CB67D' : pct > 25 ? '#F4A726' : '#E05C5C'
@@ -93,7 +98,7 @@ export default function Stock() {
                              }}>
                           <div className="text-[11px] font-semibold uppercase tracking-[0.4px] mb-1"
                                style={{ color: '#5C7A74' }}>
-                            {s.materiau}
+                            {formatMateriau(s.materiau)}
                           </div>
                           <div className="text-[22px] font-extrabold"
                                style={{ color: isAlerte ? '#E05C5C' : '#1A2B26' }}>
