@@ -24,6 +24,7 @@ async function main() {
 
   // ─── 2. AGENTS ──────────────────────────────────────────────
   // Nettoyage : supprime les doublons Saffo dont le téléphone n'est pas le bon
+  await prisma.stockAgent.deleteMany()
   await prisma.agent.deleteMany({
     where: { nom: 'Saffo', prenom: 'Jean Claude', telephone: { not: '+225 0708090001' } }
   })
