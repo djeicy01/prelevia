@@ -1,15 +1,28 @@
 import { NavLink } from 'react-router-dom'
-import { Users, FlaskConical } from 'lucide-react'
+
+// SVG inline — pas de dépendance lucide-react requise
+const IconUsers = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+)
+const IconFlask = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 3h6"/><path d="M10 9 4.5 19.5A1 1 0 0 0 5.4 21h13.2a1 1 0 0 0 .9-1.5L14 9"/>
+    <path d="M8.5 9h7"/>
+  </svg>
+)
 
 const NAV: { to: string; icon: React.ReactNode; label: string }[] = [
-  { to: '/',           icon: '📊', label: 'Tableau de bord' },
-  { to: '/patients',   icon: <Users size={17} />,        label: 'Dossiers patients' },
-  { to: '/assurances', icon: '🛡️', label: 'Assurances' },
-  { to: '/paiements',  icon: '💳', label: 'Paiements' },
-  { to: '/agents',     icon: '🏍️', label: 'Agents' },
-  { to: '/missions',   icon: '📍', label: 'Missions' },
-  { to: '/stock',      icon: <FlaskConical size={17} />, label: 'Stock matériel' },
-  { to: '/rapports',   icon: '📈', label: 'Rapports' },
+  { to: '/',           icon: '📊',           label: 'Tableau de bord' },
+  { to: '/patients',   icon: <IconUsers />,  label: 'Dossiers patients' },
+  { to: '/assurances', icon: '🛡️',          label: 'Assurances' },
+  { to: '/paiements',  icon: '💳',           label: 'Paiements' },
+  { to: '/agents',     icon: '🏍️',          label: 'Agents' },
+  { to: '/missions',   icon: '📍',           label: 'Missions' },
+  { to: '/stock',      icon: <IconFlask />,  label: 'Stock matériel' },
+  { to: '/rapports',   icon: '📈',           label: 'Rapports' },
 ]
 
 const NAV_BOTTOM = [
