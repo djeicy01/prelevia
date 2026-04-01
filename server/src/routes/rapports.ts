@@ -138,19 +138,30 @@ router.get('/dashboard', async (req: AuthRequest, res: Response) => {
 // Paramètres : periode (mois | semaine | annee), granularite (jour | mois)
 router.get('/ca', async (req: AuthRequest, res: Response) => {
   try {
-    const { periode = 'mois' } = req.query
+    const { periode = 'mois', dateDebut, dateFin } = req.query
 
-    const debut = debutPeriode(
-      ['mois', 'semaine', 'annee'].includes(String(periode))
-        ? (String(periode) as 'mois' | 'semaine' | 'annee')
-        : 'mois'
-    )
+    // dateDebut + dateFin ont priorité sur periode
+    let debut: Date
+    let fin:   Date | undefined
+    if (dateDebut && dateFin) {
+      debut = new Date(String(dateDebut))
+      fin   = new Date(String(dateFin))
+      fin.setHours(23, 59, 59, 999)
+    } else {
+      debut = debutPeriode(
+        ['mois', 'semaine', 'annee'].includes(String(periode))
+          ? (String(periode) as 'mois' | 'semaine' | 'annee')
+          : 'mois'
+      )
+    }
 
-    // Récupérer tous les paiements confirmés sur la période
+    const encaisseAFilter: any = { gte: debut }
+    if (fin) encaisseAFilter.lte = fin
+
     const paiements = await prisma.paiement.findMany({
       where: {
         statut:    'CONFIRME',
-        encaisseA: { gte: debut },
+        encaisseA: encaisseAFilter,
       },
       select: { montant: true, encaisseA: true, mode: true },
       orderBy: { encaisseA: 'asc' },
@@ -314,23 +325,34 @@ router.get('/communes', async (req: AuthRequest, res: Response) => {
 // Paramètre : periode (mois | semaine | annee)
 router.get('/agents', async (req: AuthRequest, res: Response) => {
   try {
-    const { periode = 'mois' } = req.query
+    const { periode = 'mois', dateDebut, dateFin } = req.query
 
-    const debut = debutPeriode(
-      ['mois', 'semaine', 'annee'].includes(String(periode))
-        ? (String(periode) as 'mois' | 'semaine' | 'annee')
-        : 'mois'
-    )
+    let debut: Date
+    let fin:   Date | undefined
+    if (dateDebut && dateFin) {
+      debut = new Date(String(dateDebut))
+      fin   = new Date(String(dateFin))
+      fin.setHours(23, 59, 59, 999)
+    } else {
+      debut = debutPeriode(
+        ['mois', 'semaine', 'annee'].includes(String(periode))
+          ? (String(periode) as 'mois' | 'semaine' | 'annee')
+          : 'mois'
+      )
+    }
+
+    const dateFilter: any = { gte: debut }
+    if (fin) dateFilter.lte = fin
 
     const agents = await prisma.agent.findMany({
       where:   { statut: 'ACTIF' },
       include: {
         missions: {
-          where: { date: { gte: debut } },
+          where: { date: dateFilter },
           select: { statut: true },
         },
         revenus: {
-          where:  { date: { gte: debut } },
+          where:  { date: dateFilter },
           select: { montant: true, type: true },
         },
         stocks: { select: { quantite: true, seuilAlerte: true } },
