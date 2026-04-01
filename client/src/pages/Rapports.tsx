@@ -3,10 +3,17 @@ import Topbar from '../components/layout/Topbar'
 import Spinner from '../components/ui/Spinner'
 import { rapportsService } from '../services/rapports'
 
-type Periode = 'semaine' | 'mois' | 'annee'
+type Periode = 'semaine' | 'mois' | 'annee' | 'custom'
+
+// Formate une Date en YYYY-MM-DD pour les inputs type="date"
+function toInputDate(d: Date): string { return d.toISOString().slice(0, 10) }
 
 export default function Rapports() {
   const [periode, setPeriode]       = useState<Periode>('mois')
+  const [dateDebut, setDateDebut]   = useState(() => {
+    const d = new Date(); d.setDate(1); return toInputDate(d)   // 1er du mois courant
+  })
+  const [dateFin, setDateFin]       = useState(() => toInputDate(new Date()))
   const [ca, setCa]                 = useState<any>(null)
   const [ocr, setOcr]               = useState<any>(null)
   const [examens, setExamens]       = useState<any>(null)
@@ -14,20 +21,37 @@ export default function Rapports() {
   const [agentPerf, setAgentPerf]   = useState<any>(null)
   const [loading, setLoading]       = useState(true)
 
-  useEffect(() => {
+  function load(p: Periode, dd: string, df: string) {
     setLoading(true)
+    const custom = p === 'custom' && dd && df
+    const caParams     = custom ? { dateDebut: dd, dateFin: df } : { periode: p }
+    const agentParams  = custom ? { dateDebut: dd, dateFin: df } : { periode: p }
+    const ocrParams    = custom ? { dateDebut: dd, dateFin: df } : undefined
+    const examensParams = custom
+      ? { limit: 8, dateDebut: dd, dateFin: df }
+      : { limit: 8 }
+
     Promise.all([
-      rapportsService.ca(periode),
-      rapportsService.ocr(),
-      rapportsService.examens({ limit: 8 }),
+      rapportsService.ca(caParams),
+      rapportsService.ocr(ocrParams),
+      rapportsService.examens(examensParams),
       rapportsService.communes(),
-      rapportsService.agents(periode),
+      rapportsService.agents(agentParams),
     ])
       .then(([c, o, e, com, ap]) => {
         setCa(c); setOcr(o); setExamens(e); setCommunes(com); setAgentPerf(ap)
       })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    if (periode !== 'custom') load(periode, dateDebut, dateFin)
   }, [periode])
+
+  // Déclenche le rechargement custom uniquement quand les deux dates sont valides
+  function handleCustomApply() {
+    if (dateDebut && dateFin && dateDebut <= dateFin) load('custom', dateDebut, dateFin)
+  }
 
   return (
     <div className="flex flex-col flex-1">
@@ -35,21 +59,48 @@ export default function Rapports() {
         title="Rapports"
         subtitle="Analyse des performances"
         actions={
-          <div className="flex gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             {(['semaine', 'mois', 'annee'] as Periode[]).map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriode(p)}
+              <button key={p} onClick={() => setPeriode(p)}
                 className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
                 style={{
                   background: periode === p ? '#0A6E5C' : '#F5F7F6',
                   color:      periode === p ? '#fff'    : '#5C7A74',
                   border:     `1.5px solid ${periode === p ? '#0A6E5C' : '#D4E5E1'}`,
-                }}
-              >
+                }}>
                 {p.charAt(0).toUpperCase() + p.slice(1)}
               </button>
             ))}
+            <button onClick={() => setPeriode('custom')}
+              className="px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all"
+              style={{
+                background: periode === 'custom' ? '#0A6E5C' : '#F5F7F6',
+                color:      periode === 'custom' ? '#fff'    : '#5C7A74',
+                border:     `1.5px solid ${periode === 'custom' ? '#0A6E5C' : '#D4E5E1'}`,
+              }}>
+              Personnalisé
+            </button>
+
+            {/* Champs date — visibles uniquement en mode custom */}
+            {periode === 'custom' && (
+              <div className="flex items-center gap-1.5 ml-1">
+                <input type="date" value={dateDebut}
+                  onChange={e => setDateDebut(e.target.value)}
+                  className="text-[12px] px-2 py-1.5 rounded-lg border outline-none"
+                  style={{ borderColor: '#D4E5E1', color: '#1A2B26' }} />
+                <span className="text-[11px]" style={{ color: '#5C7A74' }}>→</span>
+                <input type="date" value={dateFin}
+                  onChange={e => setDateFin(e.target.value)}
+                  className="text-[12px] px-2 py-1.5 rounded-lg border outline-none"
+                  style={{ borderColor: '#D4E5E1', color: '#1A2B26' }} />
+                <button onClick={handleCustomApply}
+                  disabled={!dateDebut || !dateFin || dateDebut > dateFin}
+                  className="px-3 py-1.5 rounded-lg text-[12px] font-semibold text-white disabled:opacity-40"
+                  style={{ background: '#F4A726' }}>
+                  Appliquer
+                </button>
+              </div>
+            )}
           </div>
         }
       />
