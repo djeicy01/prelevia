@@ -1,6 +1,7 @@
 import { Router, Response } from 'express'
 import prisma from '../lib/prisma'
 import { authMiddleware, AuthRequest } from '../middlewares/auth'
+import { envoyerSMSResultatsCritiques } from './sms'
 
 const router = Router()
 router.use(authMiddleware)
@@ -407,6 +408,230 @@ router.patch('/:id/statut', async (req: AuthRequest, res: Response) => {
     if (err.code === 'P2025') {
       return res.status(404).json({ error: 'Dossier introuvable' })
     }
+    console.error(err)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// ─── GET /api/dossiers/:id/suivi ──────────────────────────────
+// Timeline 7 étapes pour l'app patient
+router.get('/:id/suivi', async (req: AuthRequest, res: Response) => {
+  try {
+    const dossier = await prisma.dossier.findUnique({
+      where:   { id: String(req.params.id) },
+      include: {
+        mission: true,
+        resultats: { select: { id: true } },
+      },
+    })
+    if (!dossier) return res.status(404).json({ error: 'Dossier introuvable' })
+
+    const s = dossier.statut
+    const m = dossier.mission
+
+    // Statuts ordonnés pour comparaison
+    const ORDER = ['EN_ATTENTE','PRET_PRELEVEMENT','PRELEVEMENT_FAIT','PAYE','RESULTATS_EN_COURS','RESULTATS_DISPONIBLES','ARCHIVE']
+    const idx   = (st: string) => ORDER.indexOf(st)
+    const after = (st: string) => idx(s) >= idx(st)
+
+    const etapes = [
+      {
+        code:        'CREE',
+        label:       'Dossier créé',
+        description: 'Votre demande de prélèvement a été enregistrée.',
+        statut:      'done',
+        timestamp:   dossier.createdAt,
+      },
+      {
+        code:        'AGENT_ASSIGNE',
+        label:       'Agent assigné',
+        description: "Un agent de prélèvement vous a été attribué.",
+        statut:      m ? 'done' : (after('PRET_PRELEVEMENT') ? 'active' : 'pending'),
+        timestamp:   m?.createdAt ?? null,
+      },
+      {
+        code:        'AGENT_EN_ROUTE',
+        label:       'Agent en route',
+        description: "Votre agent est en chemin vers votre domicile.",
+        statut:      m && ['EN_ROUTE','ARRIVEE','PRELEVEMENT_FAIT','TERMINEE'].includes(m.statut)
+                       ? 'done'
+                       : (m ? 'active' : 'pending'),
+        timestamp:   null,
+      },
+      {
+        code:        'PRELEVEMENT_EFFECTUE',
+        label:       'Prélèvement effectué',
+        description: "Les échantillons ont été prélevés à votre domicile.",
+        statut:      after('PRELEVEMENT_FAIT') ? 'done' : 'pending',
+        timestamp:   after('PRELEVEMENT_FAIT') ? dossier.updatedAt : null,
+      },
+      {
+        code:        'ECHANTILLONS_RECUS_LABO',
+        label:       'Échantillons reçus au laboratoire',
+        description: "Vos échantillons ont été acheminés et réceptionnés.",
+        statut:      after('PAYE') ? 'done' : 'pending',
+        timestamp:   null,
+      },
+      {
+        code:        'ANALYSES_EN_COURS',
+        label:       'Analyses en cours',
+        description: "Le laboratoire procède à l'analyse de vos échantillons.",
+        statut:      s === 'RESULTATS_EN_COURS' ? 'active'
+                   : after('RESULTATS_EN_COURS') ? 'done'
+                   : 'pending',
+        timestamp:   null,
+      },
+      {
+        code:        'RESULTATS_DISPONIBLES',
+        label:       'Résultats disponibles',
+        description: "Vos résultats sont prêts. Consultez-les dans l'application.",
+        statut:      s === 'RESULTATS_DISPONIBLES' || s === 'ARCHIVE' ? 'done' : 'pending',
+        timestamp:   s === 'RESULTATS_DISPONIBLES' || s === 'ARCHIVE' ? dossier.updatedAt : null,
+      },
+    ]
+
+    res.json({ ref: dossier.ref, statut: s, etapes })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// ─── GET /api/dossiers/:id/resultats ──────────────────────────
+router.get('/:id/resultats', async (req: AuthRequest, res: Response) => {
+  try {
+    const dossier = await prisma.dossier.findUnique({
+      where:   { id: String(req.params.id) },
+      include: {
+        examens: {
+          include: {
+            catalogue: { select: { id: true, code: true, nom: true, unite: false } },
+            resultat:  true,
+          },
+        },
+      },
+    })
+    if (!dossier) return res.status(404).json({ error: 'Dossier introuvable' })
+
+    const resultats = dossier.examens
+      .filter(e => e.resultat)
+      .map(e => ({
+        examenId:      e.id,
+        code:          e.catalogue.code,
+        nom:           e.catalogue.nom,
+        valeur:        e.resultat!.valeur,
+        unite:         e.resultat!.unite,
+        normeMin:      e.resultat!.normeMin,
+        normeMax:      e.resultat!.normeMax,
+        estCritique:   e.resultat!.estCritique,
+        interpretation: e.resultat!.interpretation,
+        commentaire:   e.resultat!.commentaire,
+        saisiLe:       e.resultat!.saisiLe,
+      }))
+
+    res.json({ ref: dossier.ref, resultats })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// ─── POST /api/dossiers/:id/resultats ─────────────────────────
+// Enregistrer les valeurs d'examens — détection critique auto
+// Body : { resultats: [{ examenId, valeur, unite, normeMin, normeMax, commentaire }] }
+router.post('/:id/resultats', async (req: AuthRequest, res: Response) => {
+  try {
+    const dossierId = String(req.params.id)
+    const { resultats: items } = req.body
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'resultats[] requis' })
+    }
+
+    const dossier = await prisma.dossier.findUnique({
+      where:   { id: dossierId },
+      include: { patient: { select: { telephone: true } } },
+    })
+    if (!dossier) return res.status(404).json({ error: 'Dossier introuvable' })
+
+    let auMoinsUnCritique = false
+
+    for (const item of items) {
+      const { examenId, valeur, unite, normeMin, normeMax, commentaire } = item
+
+      // Détection critique : valeur numérique hors normes
+      let estCritique = false
+      const valNum = parseFloat(String(valeur))
+      if (!isNaN(valNum)) {
+        if (normeMin !== undefined && valNum < Number(normeMin)) estCritique = true
+        if (normeMax !== undefined && valNum > Number(normeMax)) estCritique = true
+      }
+
+      if (estCritique) auMoinsUnCritique = true
+
+      // Interprétation auto
+      let interpretation = 'NORMAL'
+      if (estCritique) interpretation = 'CRITIQUE'
+      else if (!isNaN(valNum) && normeMax !== undefined && valNum > Number(normeMax)) interpretation = 'ELEVE'
+      else if (!isNaN(valNum) && normeMin !== undefined && valNum < Number(normeMin)) interpretation = 'BAS'
+
+      // Upsert résultat
+      const examen = await prisma.examen.findUnique({
+        where:   { id: examenId },
+        select:  { id: true, patientId: false, dossierId: true },
+      })
+      if (!examen) continue
+
+      // Récupérer le patientId du dossier
+      await prisma.resultatExamen.upsert({
+        where:  { examenId },
+        update: {
+          valeur:        String(valeur),
+          unite:         unite ?? null,
+          normaleMin:    normeMin !== undefined ? String(normeMin) : null,
+          normaleMax:    normeMax !== undefined ? String(normeMax) : null,
+          normeMin:      normeMin !== undefined ? Number(normeMin) : null,
+          normeMax:      normeMax !== undefined ? Number(normeMax) : null,
+          estCritique,
+          interpretation: interpretation as any,
+          commentaire:   commentaire ?? null,
+          saisiPar:      req.user?.userId ?? 'system',
+          updatedAt:     new Date(),
+        },
+        create: {
+          examenId,
+          patientId:    dossier.patientId,
+          valeur:       String(valeur),
+          unite:        unite ?? null,
+          normaleMin:   normeMin !== undefined ? String(normeMin) : null,
+          normaleMax:   normeMax !== undefined ? String(normeMax) : null,
+          normeMin:     normeMin !== undefined ? Number(normeMin) : null,
+          normeMax:     normeMax !== undefined ? Number(normeMax) : null,
+          estCritique,
+          interpretation: interpretation as any,
+          commentaire:  commentaire ?? null,
+          saisiPar:     req.user?.userId ?? 'system',
+        },
+      })
+    }
+
+    // Passer le dossier en RESULTATS_DISPONIBLES
+    await prisma.dossier.update({
+      where: { id: dossierId },
+      data:  { statut: 'RESULTATS_DISPONIBLES' },
+    })
+
+    // SMS critique si nécessaire
+    if (auMoinsUnCritique && dossier.patient?.telephone) {
+      await envoyerSMSResultatsCritiques(dossier.patient.telephone, dossier.ref)
+    }
+
+    res.json({
+      message:      'Résultats enregistrés',
+      critiques:    auMoinsUnCritique,
+      smsCritique:  auMoinsUnCritique,
+    })
+  } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Erreur serveur' })
   }
