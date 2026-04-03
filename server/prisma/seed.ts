@@ -118,11 +118,12 @@ async function main() {
     { code:'AGENT_EN_ROUTE',       sujet:'Agent en route',            contenu:'Bonjour {prenom}, votre agent Prelevia est en route. Arrivée estimée : {eta} min. Mission : {ref_mission}' },
     { code:'RAPPEL_RDV',           sujet:'Rappel RDV demain',         contenu:'Rappel Prelevia : prélèvement demain {date} à {heure}. À jeun si nécessaire. Réf : {ref}' },
     { code:'CAMPAGNE_CONVOCATION', sujet:'Convocation campagne',      contenu:'Bonjour {prenom}, vous êtes convoqué(e) pour {nom_campagne} le {date} à {heure} — {lieu}. Apportez votre CNI.' },
+    { code:'RESULTATS_CRITIQUES',  sujet:'Résultats critiques',       contenu:'⚠️ Prelevia — Résultats {ref} disponibles. ATTENTION : des valeurs nécessitent une consultation médicale urgente. Consultez votre médecin dès aujourd\'hui.' },
   ]
   for (const t of templates) {
     await prisma.templateSMS.upsert({ where:{ code:t.code }, update:{}, create:{ ...t, actif:true } })
   }
-  console.log('✅ 6 templates SMS créés')
+  console.log('✅ 7 templates SMS créés')
 
   // ─── 7. ZONES GÉOGRAPHIQUES ─────────────────────────────
   const zones = [
