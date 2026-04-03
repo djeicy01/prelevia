@@ -275,9 +275,15 @@ model Patient {
   telephone   String
   commune     String
   adresse     String?
+  email       String?
   assuranceId String?
   assurance   Assurance?       @relation(fields: [assuranceId], references: [id])
   numCarte    String?
+  // Auth app mobile patient
+  motDePasse  String?
+  tokenOTP    String?
+  otpExpiry   DateTime?
+  tokenAuth   String?
   dossiers    Dossier[]
   resultats   ResultatExamen[]
   createdAt   DateTime         @default(now())
@@ -299,6 +305,7 @@ model Dossier {
   statut             DossierStatut      @default(EN_ATTENTE)
   statutAssurance    AssuranceStatut?
   ocrSource          OcrSource          @default(MANUAL)
+  codeOCRSource      String?
   bulletinUrl        String?
   carteAssuranceUrl  String?
   cniUrl             String?
@@ -345,10 +352,13 @@ model ResultatExamen {
   examen         Examen         @relation(fields: [examenId], references: [id],onDelete: Cascade)
   patientId      String
   patient        Patient        @relation(fields: [patientId], references: [id])
-  valeur         String
+  valeur         String?
   unite          String?
   normaleMin     String?
   normaleMax     String?
+  normeMin       Float?
+  normeMax       Float?
+  estCritique    Boolean        @default(false)
   interpretation Interpretation @default(EN_ATTENTE)
   commentaire    String?
   saisiPar       String
@@ -356,6 +366,7 @@ model ResultatExamen {
   updatedAt      DateTime       @updatedAt
 
   @@index([patientId])
+  @@index([estCritique])
 }
 
 model DocumentResultat {
@@ -524,4 +535,18 @@ model CampagneAgent {
   role       String   @default("PRELEVEUR")
 
   @@unique([campagneId, agentId])
+}
+
+// ============================================================
+// MODEL — ASSUREURS NON PARTENAIRES (signalés par patients)
+// ============================================================
+
+model AssureurNonPartenaire {
+  id               String   @id @default(cuid())
+  nom              String   @unique
+  nombreMentions   Int      @default(1)
+  premiereMention  DateTime @default(now())
+  derniereMention  DateTime @updatedAt
+
+  @@index([nombreMentions])
 }
