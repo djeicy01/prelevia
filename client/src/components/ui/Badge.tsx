@@ -55,36 +55,47 @@ export function BadgeOcr({ source }: { source?: OcrSource | null }) {
   return <Badge variant={v}>{label}</Badge>
 }
 
-export function BadgeDossier({ statut }: { statut: DossierStatut }) {
-  const MAP: Record<DossierStatut, [Variant, string]> = {
-    EN_ATTENTE:        ['neutral', 'En attente'],
-    PRET_PRELEVEMENT:  ['info',    'Prêt'],
-    PRELEVEMENT_FAIT:  ['teal',    'Prélevé'],
-    PAYE:              ['success', 'Payé'],
-    ARCHIVE:           ['neutral', 'Archivé'],
+export function BadgeDossier({ statut = 'INCONNU' }: { statut?: DossierStatut | string | null }) {
+  if (!statut) return null
+  const MAP: Record<string, [Variant, string]> = {
+    EN_ATTENTE:            ['neutral', 'En attente'],
+    PRET_PRELEVEMENT:      ['info',    'Prêt'],
+    PRELEVEMENT_FAIT:      ['teal',    'Prélevé'],
+    RESULTATS_EN_COURS:    ['purple',  'Résultats en cours'],
+    RESULTATS_DISPONIBLES: ['success', 'Résultats dispo'],
+    PAYE:                  ['success', 'Payé'],
+    ARCHIVE:               ['neutral', 'Archivé'],
   }
-  const [v, label] = MAP[statut]
+  const entry = MAP[statut]
+  if (!entry) return <Badge variant="neutral">{statut}</Badge>
+  const [v, label] = entry
   return <Badge variant={v}>{label}</Badge>
 }
 
-export function BadgeMission({ statut }: { statut: MissionStatut }) {
-  const MAP: Record<MissionStatut, [Variant, string]> = {
+export function BadgeMission({ statut }: { statut?: MissionStatut | string | null }) {
+  if (!statut) return null
+  const MAP: Record<string, [Variant, string]> = {
     PLANIFIEE:        ['info',    '📋 Planifiée'],
     EN_ROUTE:         ['orange',  '🏍️ En route'],
     ARRIVEE:          ['warning', '📍 Arrivée'],
     PRELEVEMENT_FAIT: ['teal',    '🧪 Prélevé'],
     TERMINEE:         ['success', '✅ Terminée'],
   }
-  const [v, label] = MAP[statut]
+  const entry = MAP[statut]
+  if (!entry) return <Badge variant="neutral">{statut}</Badge>
+  const [v, label] = entry
   return <Badge variant={v}>{label}</Badge>
 }
 
-export function BadgePaiement({ statut }: { statut: PaiementStatut }) {
-  const MAP: Record<PaiementStatut, [Variant, string]> = {
+export function BadgePaiement({ statut }: { statut?: PaiementStatut | string | null }) {
+  if (!statut) return null
+  const MAP: Record<string, [Variant, string]> = {
     EN_ATTENTE: ['warning', '⏳ En attente'],
     CONFIRME:   ['success', '✅ Confirmé'],
     ECHEC:      ['danger',  '❌ Échec'],
   }
-  const [v, label] = MAP[statut]
+  const entry = MAP[statut]
+  if (!entry) return <Badge variant="neutral">{statut}</Badge>
+  const [v, label] = entry
   return <Badge variant={v}>{label}</Badge>
 }
