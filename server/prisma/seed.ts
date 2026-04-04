@@ -348,9 +348,10 @@ async function main() {
   }
 
   // ─── 12. PATIENTS & DOSSIERS DE DÉMONSTRATION ──────────
-  const mugefci  = await prisma.assurance.findUnique({ where: { nom: 'MUGEFCI'   } })
-  const cnps     = await prisma.assurance.findUnique({ where: { nom: 'CNPS'      } })
-  const sanlam   = await prisma.assurance.findUnique({ where: { nom: 'Sanlam CI' } })
+  const mugefci  = await prisma.assurance.findUnique({ where: { nom: 'MUGEFCI'    } })
+  const cnps     = await prisma.assurance.findUnique({ where: { nom: 'CNPS'       } })
+  const sanlam   = await prisma.assurance.findUnique({ where: { nom: 'Sanlam CI'  } })
+  const nsia     = await prisma.assurance.findUnique({ where: { nom: 'NSIA Santé' } })
 
   // Helper : récupère l'id d'un examen catalogue par code
   async function catId(code: string) {
@@ -360,49 +361,67 @@ async function main() {
 
   const patientsDemo = [
     {
-      ref: 'PAT-2026-00001', nom: 'Kouassi', prenom: 'Ama',
-      telephone: '0707070707', commune: 'Yopougon',
+      ref: 'PAT-2026-00001', nom: 'Kouassi',   prenom: 'Ama',
+      telephone: '0707070701', commune: 'Yopougon',
       assuranceId: mugefci?.id,
-      dossierRef: 'DOS-2026-00001', statut: 'EN_ATTENTE'       as const,
-      statutAssurance: 'VALIDE_TOTAL'  as const,
+      dossierRef: 'DOS-2026-00001', statut: 'EN_ATTENTE'            as const,
+      statutAssurance: 'DOCS_COLLECTES'  as const,
       ocrSource: 'AUTO'    as const,
       examCodes: ['NFS', 'GLY', 'CRE'],
     },
     {
-      ref: 'PAT-2026-00002', nom: 'Diallo', prenom: 'Moussa',
-      telephone: '0505050505', commune: 'Yopougon',
+      ref: 'PAT-2026-00002', nom: 'Diallo',    prenom: 'Moussa',
+      telephone: '0707070702', commune: 'Cocody',
       assuranceId: undefined,
-      dossierRef: 'DOS-2026-00002', statut: 'PRET_PRELEVEMENT' as const,
+      dossierRef: 'DOS-2026-00002', statut: 'PRET_PRELEVEMENT'      as const,
       statutAssurance: null,
       ocrSource: 'PATIENT' as const,
-      examCodes: ['TSH', 'T4L'],
+      examCodes: ['TSH', 'T4L', 'T3L'],
     },
     {
-      ref: 'PAT-2026-00003', nom: 'Traoré', prenom: 'Fatou',
-      telephone: '0101010101', commune: 'Yopougon',
+      ref: 'PAT-2026-00003', nom: 'Traoré',    prenom: 'Fatoumata',
+      telephone: '0707070703', commune: 'Abobo',
       assuranceId: cnps?.id,
-      dossierRef: 'DOS-2026-00003', statut: 'PRELEVEMENT_FAIT' as const,
-      statutAssurance: 'EN_VALIDATION' as const,
+      dossierRef: 'DOS-2026-00003', statut: 'PRELEVEMENT_FAIT'      as const,
+      statutAssurance: 'EN_VALIDATION'   as const,
       ocrSource: 'AUTO'    as const,
-      examCodes: ['NFS', 'HIV', 'AGBS'],
+      examCodes: ['NFS', 'HIV', 'AGBS', 'SYP'],
     },
     {
-      ref: 'PAT-2026-00004', nom: 'Koné', prenom: 'Ibrahim',
-      telephone: '0909090909', commune: 'Yopougon',
+      ref: 'PAT-2026-00004', nom: 'Koné',      prenom: 'Ibrahim',
+      telephone: '0707070704', commune: 'Attécoubé',
       assuranceId: undefined,
-      dossierRef: 'DOS-2026-00004', statut: 'EN_ATTENTE'       as const,
+      dossierRef: 'DOS-2026-00004', statut: 'EN_ATTENTE'            as const,
       statutAssurance: null,
       ocrSource: 'AGENT'   as const,
-      examCodes: ['GLY', 'HBA'],
+      examCodes: ['GLY', 'HBA', 'LIP'],
     },
     {
-      ref: 'PAT-2026-00005', nom: 'Bamba', prenom: 'Adjoua',
-      telephone: '0303030303', commune: 'Yopougon',
+      ref: 'PAT-2026-00005', nom: 'Bamba',     prenom: 'Adjoua',
+      telephone: '0707070705', commune: 'Yopougon',
       assuranceId: sanlam?.id,
-      dossierRef: 'DOS-2026-00005', statut: 'PAYE'             as const,
-      statutAssurance: 'VALIDE_PARTIEL' as const,
+      dossierRef: 'DOS-2026-00005', statut: 'PAYE'                  as const,
+      statutAssurance: 'VALIDE_PARTIEL'  as const,
       ocrSource: 'AUTO'    as const,
-      examCodes: ['FSH', 'EST', 'PRG'],
+      examCodes: ['FSH', 'EST', 'PRG', 'TSH'],
+    },
+    {
+      ref: 'PAT-2026-00006', nom: 'N\'Guessan', prenom: 'Éric',
+      telephone: '0707070706', commune: 'Plateau',
+      assuranceId: nsia?.id,
+      dossierRef: 'DOS-2026-00006', statut: 'RESULTATS_DISPONIBLES' as const,
+      statutAssurance: 'VALIDE_TOTAL'    as const,
+      ocrSource: 'AUTO'    as const,
+      examCodes: ['NFS', 'CRE', 'URE', 'ION'],
+    },
+    {
+      ref: 'PAT-2026-00007', nom: 'Ouattara',  prenom: 'Mariam',
+      telephone: '0707070707', commune: 'Yopougon',
+      assuranceId: mugefci?.id,
+      dossierRef: 'DOS-2026-00007', statut: 'PAYE'                  as const,
+      statutAssurance: 'VALIDE_TOTAL'    as const,
+      ocrSource: 'PATIENT' as const,
+      examCodes: ['TSH', 'NFS', 'GLY', 'CRP'],
     },
   ]
 
@@ -453,11 +472,11 @@ async function main() {
       }
     }
   }
-  console.log('✅ 5 patients et 5 dossiers de démonstration créés')
+  console.log('✅ 7 patients et 7 dossiers de démonstration créés')
 
   // ─── 13. MISSIONS DE TEST ───────────────────────────────
   const agentBernard = await prisma.agent.findUnique({ where: { telephone: '+225 07 00 00 00' } })
-  const agentFatou   = await prisma.agent.findUnique({ where: { telephone: '+225 0102030405' } })
+  const agentFatou   = await prisma.agent.findUnique({ where: { telephone: '+225 0102030405'  } })
 
   // 4ème agent pour les missions si absent
   const agentSaffo = await prisma.agent.upsert({
@@ -473,34 +492,36 @@ async function main() {
     }
   })
 
-  const dossMoussa  = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00002' } })
-  const dossFatou   = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00003' } })
-  const dossAdjoua  = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00005' } })
+  const dossPret      = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00002' } })
+  const dossEnCours   = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00003' } })
+  const dossTerminee1 = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00005' } })
+  const dossTerminee2 = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00007' } })
 
   const today     = new Date()
   const yesterday = new Date(Date.now() - 86_400_000)
+  const tomorrow  = new Date(Date.now() + 86_400_000)
 
   const missions = [
     {
-      ref:     'MIS-2026-00001',
-      agentId: agentBernard!.id,
-      dossier: dossMoussa,
-      statut:  'PLANIFIEE' as const,
-      date:    today,
+      ref:      'MIS-2026-00001',
+      agentId:  agentSaffo.id,
+      dossiers: [dossTerminee1, dossTerminee2],
+      statut:   'TERMINEE'  as const,
+      date:     yesterday,
     },
     {
-      ref:     'MIS-2026-00002',
-      agentId: agentFatou!.id,
-      dossier: dossFatou,
-      statut:  'EN_ROUTE' as const,
-      date:    today,
+      ref:      'MIS-2026-00002',
+      agentId:  agentFatou!.id,
+      dossiers: [dossEnCours],
+      statut:   'EN_ROUTE'  as const,
+      date:     today,
     },
     {
-      ref:     'MIS-2026-00003',
-      agentId: agentSaffo.id,
-      dossier: dossAdjoua,
-      statut:  'TERMINEE' as const,
-      date:    yesterday,
+      ref:      'MIS-2026-00003',
+      agentId:  agentBernard!.id,
+      dossiers: [dossPret],
+      statut:   'PLANIFIEE' as const,
+      date:     tomorrow,
     },
   ]
 
@@ -515,15 +536,64 @@ async function main() {
         statut:  m.statut,
       },
     })
-    // Lier le dossier à la mission si pas encore lié
-    if (m.dossier && !m.dossier.missionId) {
-      await prisma.dossier.update({
-        where: { id: m.dossier.id },
-        data:  { missionId: mission.id },
+    // Lier chaque dossier à la mission si pas encore lié
+    for (const doss of m.dossiers) {
+      if (doss && !doss.missionId) {
+        await prisma.dossier.update({
+          where: { id: doss.id },
+          data:  { missionId: mission.id },
+        })
+      }
+    }
+  }
+  console.log('✅ 3 missions créées (TERMINEE · EN_ROUTE · PLANIFIEE)')
+
+  // ─── 14. PAIEMENTS DE DÉMONSTRATION ─────────────────────
+  const dossAdjoua  = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00005' } })
+  const dossMariam  = await prisma.dossier.findUnique({ where: { ref: 'DOS-2026-00007' } })
+
+  if (dossAdjoua) {
+    // Calcul du total des examens du dossier
+    const examsAdjoua = await prisma.examen.findMany({ where: { dossierId: dossAdjoua.id } })
+    const totalAdjoua = examsAdjoua.reduce((sum, e) => sum + e.tarif, 0)
+    const partPatientAdjoua = Math.round(
+      examsAdjoua.reduce((sum, e) => sum + (e.couvert ? e.tarif * 0.20 : e.tarif), 0)
+    )
+    const existing = await prisma.paiement.findFirst({ where: { dossierId: dossAdjoua.id } })
+    if (!existing) {
+      await prisma.paiement.create({
+        data: {
+          dossierId:  dossAdjoua.id,
+          montant:    partPatientAdjoua || totalAdjoua,
+          mode:       'ORANGE_MONEY',
+          statut:     'CONFIRME',
+          reference:  'OM-2026-00001',
+          encaisseA:  yesterday,
+        },
       })
     }
   }
-  console.log('✅ 3 missions de test créées')
+
+  if (dossMariam) {
+    const examsMariam = await prisma.examen.findMany({ where: { dossierId: dossMariam.id } })
+    const partPatientMariam = Math.round(
+      examsMariam.reduce((sum, e) => sum + (e.couvert ? e.tarif * 0.20 : e.tarif), 0)
+    )
+    const existing = await prisma.paiement.findFirst({ where: { dossierId: dossMariam.id } })
+    if (!existing) {
+      await prisma.paiement.create({
+        data: {
+          dossierId:  dossMariam.id,
+          montant:    partPatientMariam || examsMariam.reduce((s, e) => s + e.tarif, 0),
+          mode:       'WAVE',
+          statut:     'CONFIRME',
+          reference:  'WAVE-2026-00001',
+          encaisseA:  yesterday,
+        },
+      })
+    }
+  }
+  console.log('✅ 2 paiements confirmés créés')
 
   console.log('')
   console.log('🎉 Seed terminé avec succès !')
@@ -532,14 +602,15 @@ async function main() {
   console.log('   → 5 assureurs')
   console.log('   → 1 laboratoire')
   console.log('   → 7 paramètres système')
-  console.log('   → 6 templates SMS')
+  console.log('   → 7 templates SMS')
   console.log('   → 8 zones géographiques')
   console.log('   → 87 examens catalogués')
   console.log('   → 13 panels d\'analyses')
   console.log('   → 3 organisations')
   console.log('   → 8 articles de stock')
-  console.log('   → 5 patients + 5 dossiers de démonstration')
-  console.log('   → 3 missions de test')
+  console.log('   → 7 patients + 7 dossiers de démonstration')
+  console.log('   → 3 missions (TERMINEE · EN_ROUTE · PLANIFIEE)')
+  console.log('   → 2 paiements confirmés')
 }
 
 main()
