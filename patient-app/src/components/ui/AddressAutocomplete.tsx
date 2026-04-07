@@ -75,16 +75,25 @@ const COMMUNE_BBOX: Record<string, string> = {
 
 /** SVG DivIcon — évite les problèmes de chemins d'assets Vite avec les icônes Leaflet par défaut */
 function pinIcon(active = false) {
-  const fill = active ? '#F4A726' : '#064D40'
+  const fill    = active ? '#F4A726' : '#064D40'
+  const cursor  = active ? 'grabbing' : 'grab'
   return L.divIcon({
     className: '',
-    html: `<div style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">
-      <svg width="28" height="38" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M14 0C8.477 0 4 4.477 4 10c0 7.5 10 20 10 20s10-12.5 10-20C24 4.477 19.523 0 14 0z" fill="${fill}"/>
-        <circle cx="14" cy="10" r="4" fill="white"/>
+    // Outer wrapper is 44×44 px for mobile touch target; SVG is centered within it.
+    html: `<div style="
+        width:44px;height:44px;
+        display:flex;align-items:flex-end;justify-content:center;
+        cursor:${cursor};
+        filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));
+      ">
+      <svg width="36" height="48" viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 0C11.373 0 6 5.373 6 12c0 9 12 24 12 24s12-15 12-24C30 5.373 24.627 0 18 0z" fill="${fill}"/>
+        <circle cx="18" cy="12" r="5.5" fill="white"/>
       </svg></div>`,
-    iconSize: [28, 38],
-    iconAnchor: [14, 38],
+    // iconSize matches the outer 44×44 div
+    iconSize:   [44, 44],
+    // anchor at the tip of the SVG pin: horizontally centered (22), vertically at the bottom of the pin (44-2px padding = pin tip at ~46px within 44px container → clamp to 44)
+    iconAnchor: [22, 44],
   })
 }
 
@@ -258,8 +267,12 @@ export function AddressAutocomplete({
 
     const marker = L.marker(pos, { draggable: true, icon: pinIcon() }).addTo(map)
 
-    marker.on('dragstart', () => marker.setIcon(pinIcon(true)))
+    marker.on('dragstart', () => {
+      map.dragging.disable()
+      marker.setIcon(pinIcon(true))
+    })
     marker.on('dragend', async () => {
+      map.dragging.enable()
       marker.setIcon(pinIcon(false))
       const { lat, lng } = marker.getLatLng()
       setReversing(true)
@@ -431,9 +444,10 @@ export function AddressAutocomplete({
             </div>
           )}
 
-          <p className="absolute bottom-2 left-2 z-[1000] bg-white/90 rounded-lg px-2 py-1 text-[10px] text-[#5C7A74] font-medium shadow pointer-events-none">
-            Déplacez le marqueur pour ajuster
-          </p>
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 rounded-xl px-3 py-1.5 shadow border border-[#D4E5E1] pointer-events-none flex items-center gap-1.5">
+            <span className="text-sm leading-none">✋</span>
+            <span className="text-xs font-semibold text-[#1A2B26] whitespace-nowrap">Maintenez et glissez pour déplacer</span>
+          </div>
         </div>
       )}
     </div>
