@@ -19,11 +19,15 @@
  *   avec le filtre components: 'country:ci'.
  *
  * ─── Props ───────────────────────────────────────────────────────────────────
- *   value       — valeur contrôlée du champ texte
- *   onChange    — appelé à chaque frappe (string)
- *   onSelect    — appelé quand une suggestion est choisie (adresse, commune)
- *   placeholder — texte placeholder (optionnel)
- *   communes    — liste des communes pour la détection automatique
+ *   value           — valeur contrôlée du champ texte
+ *   onChange        — appelé à chaque frappe (string)
+ *   onSelect        — appelé quand une suggestion est choisie (adresse, commune)
+ *   placeholder     — texte placeholder (optionnel)
+ *   communes        — liste des communes pour la détection automatique
+ *   selectedCommune — commune actuellement sélectionnée dans le dropdown parent ;
+ *                     la requête Nominatim sera scopée sur cette commune via
+ *                     le paramètre viewbox + bounded=1 (si bbox connue) ET en
+ *                     ajoutant le nom de la commune dans la query.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -44,6 +48,8 @@ export interface AddressAutocompleteProps {
   onSelect: (adresse: string, commune: string) => void
   placeholder?: string
   communes?: string[]
+  /** Commune sélectionnée dans le dropdown parent — scope la recherche Nominatim */
+  selectedCommune?: string
 }
 
 // ─── Nominatim ────────────────────────────────────────────────────────────────
@@ -73,14 +79,47 @@ function detectCommune(addr: NominatimResult['address'] = {}, communes: string[]
   return ''
 }
 
-async function searchNominatim(query: string, communes: string[]): Promise<Suggestion[]> {
+/**
+ * Bounding boxes par commune d'Abidjan (format Nominatim : minLon,maxLat,maxLon,minLat).
+ * Utilisées avec viewbox + bounded=1 pour restreindre les résultats à la zone exacte.
+ */
+const COMMUNE_BBOX: Record<string, string> = {
+  Yopougon:   '-4.12,5.45,-3.97,5.30',
+  Cocody:     '-3.98,5.42,-3.87,5.30',
+  Abobo:      '-4.08,5.52,-3.96,5.37',
+  Attécoubé:  '-4.05,5.38,-3.99,5.31',
+  Plateau:    '-4.01,5.34,-3.96,5.30',
+  Marcory:    '-4.00,5.32,-3.92,5.26',
+  Treichville: '-4.00,5.31,-3.96,5.27',
+  Adjamé:     '-4.03,5.38,-3.97,5.34',
+  Koumassi:   '-3.98,5.32,-3.91,5.26',
+  'Port-Bouët': '-3.97,5.30,-3.86,5.22',
+}
+
+async function searchNominatim(
+  query: string,
+  communes: string[],
+  selectedCommune?: string,
+): Promise<Suggestion[]> {
   const url = new URL('https://nominatim.openstreetmap.org/search')
-  url.searchParams.set('q', `${query}, Abidjan, Côte d'Ivoire`)
+
+  // Build query: include commune name when selected to bias results
+  const q = selectedCommune
+    ? `${query}, ${selectedCommune}, Abidjan, Côte d'Ivoire`
+    : `${query}, Abidjan, Côte d'Ivoire`
+  url.searchParams.set('q', q)
   url.searchParams.set('countrycodes', 'ci')
   url.searchParams.set('format', 'json')
   url.searchParams.set('limit', '6')
   url.searchParams.set('accept-language', 'fr')
   url.searchParams.set('addressdetails', '1')
+
+  // Add bounding box when commune has a known bbox → bounded=1 restricts to that area
+  const bbox = selectedCommune ? COMMUNE_BBOX[selectedCommune] : undefined
+  if (bbox) {
+    url.searchParams.set('viewbox', bbox)
+    url.searchParams.set('bounded', '1')
+  }
 
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/json' },
@@ -107,7 +146,7 @@ async function searchNominatim(query: string, communes: string[]): Promise<Sugge
 
 // ─── Google Places (stub — activé via VITE_GEOCODING_PROVIDER=google) ─────────
 
-async function searchGoogle(query: string, communes: string[]): Promise<Suggestion[]> {
+async function searchGoogle(query: string, communes: string[], selectedCommune?: string): Promise<Suggestion[]> {
   const g = (window as unknown as { google?: { maps?: { places?: { AutocompleteService?: unknown } } } }).google
   if (!g?.maps?.places?.AutocompleteService) {
     console.warn('[AddressAutocomplete] Google Places SDK non chargé.')
@@ -123,7 +162,7 @@ async function searchGoogle(query: string, communes: string[]): Promise<Suggesti
 
   return new Promise(resolve => {
     service.getPlacePredictions(
-      { input: query, componentRestrictions: { country: 'ci' }, language: 'fr' },
+      { input: selectedCommune ? `${query} ${selectedCommune}` : query, componentRestrictions: { country: 'ci' }, language: 'fr' },
       (results, status) => {
         if (status !== 'OK' || !results) { resolve([]); return }
         const suggestions: Suggestion[] = results.map(r => {
@@ -158,6 +197,7 @@ export function AddressAutocomplete({
   onSelect,
   placeholder = 'Numéro, rue, quartier…',
   communes = DEFAULT_COMMUNES,
+  selectedCommune,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading]         = useState(false)
@@ -167,6 +207,15 @@ export function AddressAutocomplete({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef     = useRef<HTMLInputElement>(null)
+
+  // Re-search when the selected commune changes (if input already has content)
+  useEffect(() => {
+    if (value.trim().length >= 3) {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => search(value), 300)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCommune])
 
   // Close on click outside
   useEffect(() => {
@@ -185,8 +234,8 @@ export function AddressAutocomplete({
     setLoading(true)
     try {
       const results = PROVIDER === 'google'
-        ? await searchGoogle(query, communes)
-        : await searchNominatim(query, communes)
+        ? await searchGoogle(query, communes, selectedCommune)
+        : await searchNominatim(query, communes, selectedCommune)
       setSuggestions(results)
       setOpen(results.length > 0)
       setActiveIndex(-1)
@@ -196,7 +245,7 @@ export function AddressAutocomplete({
     } finally {
       setLoading(false)
     }
-  }, [communes])
+  }, [communes, selectedCommune])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value
@@ -297,8 +346,14 @@ export function AddressAutocomplete({
               </div>
             </button>
           ))}
-          <div className="px-4 py-2 flex items-center justify-end gap-1 bg-[#F5F7F6]">
-            <span className="text-[10px] text-[#5C7A74]">Résultats</span>
+          <div className="px-4 py-2 flex items-center justify-between bg-[#F5F7F6]">
+            {selectedCommune ? (
+              <span className="text-[10px] font-semibold text-[#064D40]">
+                📍 Scopé sur {selectedCommune}
+              </span>
+            ) : (
+              <span />
+            )}
             <span className="text-[10px] font-bold text-[#5C7A74]">
               {PROVIDER === 'google' ? 'Google Maps' : 'OpenStreetMap'}
             </span>

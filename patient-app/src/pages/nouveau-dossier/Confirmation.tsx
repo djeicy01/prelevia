@@ -197,6 +197,7 @@ export default function Confirmation() {
             onChange={setAdresse}
             onSelect={(a, c) => { setAdresse(a); if (c) setCommune(c) }}
             communes={COMMUNES}
+            selectedCommune={commune}
           />
         </div>
 
