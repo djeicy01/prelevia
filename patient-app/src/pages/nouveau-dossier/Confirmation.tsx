@@ -38,12 +38,14 @@ export default function Confirmation() {
   const [commune, setCommune]   = useState(patient?.commune ?? 'Yopougon')
   const [adresse, setAdresse]   = useState('')
   const [creneau, setCreneau]   = useState<{ date: string; heure: string } | null>(null)
-  const [loading, setLoading]   = useState(false)
-  const [locating, setLocating] = useState(false)
+  const [loading, setLoading]     = useState(false)
+  const [locating, setLocating]   = useState(false)
+  const [locError, setLocError]   = useState<string | null>(null)
 
   const handleGetLocation = () => {
+    setLocError(null)
     if (!navigator.geolocation) {
-      toast('Géolocalisation non supportée sur cet appareil', 'error')
+      setLocError('Localisation non disponible. Veuillez saisir votre adresse manuellement.')
       return
     }
     setLocating(true)
@@ -75,13 +77,13 @@ export default function Confirmation() {
 
           toast('Position détectée', 'success')
         } catch {
-          toast('Impossible de déterminer votre adresse', 'error')
+          setLocError('Localisation non disponible. Veuillez saisir votre adresse manuellement.')
         } finally {
           setLocating(false)
         }
       },
       () => {
-        toast('Accès à la position refusé', 'error')
+        setLocError('Localisation non disponible. Veuillez saisir votre adresse manuellement.')
         setLocating(false)
       },
       { timeout: 10000, maximumAge: 60000 }
@@ -177,6 +179,11 @@ export default function Confirmation() {
               {locating ? 'Localisation…' : 'Utiliser ma position'}
             </button>
           </div>
+          {locError && (
+            <p className="text-xs text-[#E05C5C] flex items-center gap-1.5">
+              <span>⚠</span> {locError}
+            </p>
+          )}
           <select
             className="w-full border border-[#D4E5E1] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#064D40]"
             value={commune}
