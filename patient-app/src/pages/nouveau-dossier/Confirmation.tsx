@@ -8,6 +8,7 @@ import { useDossierStore } from '../../store/dossierStore'
 import { useAuthStore } from '../../store/authStore'
 import { dossiersApi } from '../../services/api'
 import { MapPin, Calendar, Clock, CheckCircle, Loader2, LocateFixed } from 'lucide-react'
+import { AddressAutocomplete } from '../../components/ui/AddressAutocomplete'
 
 const COMMUNES = [
   'Yopougon', 'Cocody', 'Abobo', 'Attécoubé', 'Plateau',
@@ -191,12 +192,11 @@ export default function Confirmation() {
           >
             {COMMUNES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <input
-            type="text"
-            placeholder="Numéro, rue, quartier…"
+          <AddressAutocomplete
             value={adresse}
-            onChange={e => setAdresse(e.target.value)}
-            className="w-full border border-[#D4E5E1] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#064D40]"
+            onChange={setAdresse}
+            onSelect={(a, c) => { setAdresse(a); if (c) setCommune(c) }}
+            communes={COMMUNES}
           />
         </div>
 
