@@ -7,24 +7,24 @@ import { toast } from '../../components/ui/Toast'
 import { useDossierStore } from '../../store/dossierStore'
 import { catalogueApi } from '../../services/api'
 import type { ExamenCatalogue } from '../../types'
-import { CheckSquare, Square, Search, Loader2, ChevronRight, X } from 'lucide-react'
+import { CheckSquare, Square, Search, Loader2, ChevronRight, X, Info, TestTube, Tag } from 'lucide-react'
 
 export default function Catalogue() {
   const navigate   = useNavigate()
   const setExamens = useDossierStore(s => s.setExamens)
 
-  const [examens, setExamensList]   = useState<ExamenCatalogue[]>([])
-  const [selected, setSelected]     = useState<Set<string>>(new Set())
-  const [query, setQuery]           = useState('')
-  const [loading, setLoading]       = useState(true)
-  const [expanded, setExpanded]     = useState<Set<string>>(new Set())
+  const [examens, setExamensList]       = useState<ExamenCatalogue[]>([])
+  const [selected, setSelected]         = useState<Set<string>>(new Set())
+  const [query, setQuery]               = useState('')
+  const [loading, setLoading]           = useState(true)
+  const [expanded, setExpanded]         = useState<Set<string>>(new Set())
+  const [infoExamen, setInfoExamen]     = useState<ExamenCatalogue | null>(null)
 
   useEffect(() => {
     catalogueApi.getAll()
       .then(data => {
         const list: ExamenCatalogue[] = data.examens ?? data ?? []
         setExamensList(list.filter(e => e.actif))
-        // Expand all categories by default
         const cats = new Set(list.map((e: ExamenCatalogue) => e.categorie))
         setExpanded(cats)
       })
@@ -128,30 +128,42 @@ export default function Catalogue() {
                   {list.map(examen => {
                     const isSelected = selected.has(examen.id)
                     return (
-                      <button
+                      <div
                         key={examen.id}
-                        onClick={() => toggle(examen.id)}
                         className={`
-                          w-full rounded-xl px-4 py-3 border text-left flex items-center gap-3 transition-all
-                          ${isSelected
-                            ? 'border-[#064D40] bg-[#064D40]/5'
-                            : 'border-[#D4E5E1] bg-white hover:border-[#064D40]/30'}
+                          rounded-xl border flex items-center gap-3 transition-all overflow-hidden
+                          ${isSelected ? 'border-[#064D40] bg-[#064D40]/5' : 'border-[#D4E5E1] bg-white'}
                         `}
                       >
-                        <span className={isSelected ? 'text-[#064D40]' : 'text-[#D4E5E1]'}>
-                          {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[#1A2B26] truncate">{examen.nom}</p>
-                          <p className="text-xs text-[#5C7A74]">
-                            <span className="font-mono font-bold">{examen.code}</span>
-                            {examen.typesTube && <span> · {examen.typesTube}</span>}
-                          </p>
-                        </div>
-                        <span className="text-xs font-bold text-[#064D40] shrink-0">
-                          {examen.tarifMax.toLocaleString()} XOF
-                        </span>
-                      </button>
+                        {/* Checkbox area */}
+                        <button
+                          onClick={() => toggle(examen.id)}
+                          className="flex items-center gap-3 flex-1 min-w-0 px-4 py-3 text-left"
+                        >
+                          <span className={isSelected ? 'text-[#064D40]' : 'text-[#D4E5E1]'}>
+                            {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-[#1A2B26] truncate">{examen.nom}</p>
+                            <p className="text-xs text-[#5C7A74]">
+                              <span className="font-mono font-bold">{examen.code}</span>
+                              {examen.typesTube && <span> · {examen.typesTube}</span>}
+                            </p>
+                          </div>
+                          <span className="text-xs font-bold text-[#064D40] shrink-0">
+                            {examen.tarifMax.toLocaleString()} XOF
+                          </span>
+                        </button>
+
+                        {/* Info button */}
+                        <button
+                          onClick={e => { e.stopPropagation(); setInfoExamen(examen) }}
+                          className="px-3 py-3 text-[#5C7A74] hover:text-[#064D40] shrink-0 border-l border-[#D4E5E1]"
+                          aria-label={`Infos sur ${examen.nom}`}
+                        >
+                          <Info size={16} />
+                        </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -173,6 +185,69 @@ export default function Catalogue() {
           <ChevronRight size={16} />
         </Button>
       </div>
+
+      {/* Info modal */}
+      {infoExamen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-end"
+          onClick={() => setInfoExamen(null)}
+        >
+          <div
+            className="w-full bg-white rounded-t-3xl p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <span className="inline-block font-mono text-xs font-bold text-[#064D40] bg-[#064D40]/10 px-2 py-0.5 rounded mb-1">
+                  {infoExamen.code}
+                </span>
+                <h3 className="text-lg font-bold text-[#1A2B26]">{infoExamen.nom}</h3>
+                <p className="text-xs text-[#5C7A74] mt-0.5">{infoExamen.categorie}</p>
+              </div>
+              <button onClick={() => setInfoExamen(null)} className="text-[#5C7A74] mt-1 shrink-0">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Description */}
+            <div>
+              <p className="text-xs font-bold text-[#5C7A74] uppercase tracking-wider mb-1.5">
+                Instructions pré-analytiques
+              </p>
+              {infoExamen.description ? (
+                <p className="text-sm text-[#1A2B26] leading-relaxed">{infoExamen.description}</p>
+              ) : (
+                <p className="text-sm text-[#5C7A74] italic">Pas d'instructions particulières pour cet examen.</p>
+              )}
+            </div>
+
+            {/* Metadata */}
+            <div className="grid grid-cols-2 gap-3">
+              {infoExamen.typesTube && (
+                <div className="bg-[#F5F7F6] rounded-xl p-3 flex items-center gap-2">
+                  <TestTube size={14} className="text-[#064D40] shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-[#5C7A74] uppercase font-bold">Tube</p>
+                    <p className="text-xs font-semibold text-[#1A2B26]">{infoExamen.typesTube}</p>
+                  </div>
+                </div>
+              )}
+              <div className="bg-[#F5F7F6] rounded-xl p-3 flex items-center gap-2">
+                <Tag size={14} className="text-[#064D40] shrink-0" />
+                <div>
+                  <p className="text-[10px] text-[#5C7A74] uppercase font-bold">Tarif</p>
+                  <p className="text-xs font-semibold text-[#1A2B26]">{infoExamen.tarifMax.toLocaleString()} XOF</p>
+                </div>
+              </div>
+            </div>
+
+            <Button variant="primary" size="lg" fullWidth onClick={() => { toggle(infoExamen.id); setInfoExamen(null) }}>
+              {selected.has(infoExamen.id) ? 'Retirer la sélection' : 'Sélectionner cet examen'}
+            </Button>
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }

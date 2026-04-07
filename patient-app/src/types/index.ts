@@ -47,6 +47,7 @@ export interface ExamenCatalogue {
   tarifMin: number
   tarifMax: number
   typesTube: string
+  description?: string
   actif: boolean
 }
 

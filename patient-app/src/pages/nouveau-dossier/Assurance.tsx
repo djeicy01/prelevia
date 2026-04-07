@@ -35,7 +35,7 @@ export default function AssurancePage() {
     } else {
       setAssurance(null, undefined)
     }
-    navigate('/nouveau-dossier/confirmation')
+    navigate('/nouveau-dossier/pre-analytique')
   }
 
   const canContinue =
@@ -132,7 +132,7 @@ export default function AssurancePage() {
 
       <div className="px-5 pb-8">
         <Button variant="primary" size="lg" fullWidth onClick={handleNext} disabled={!canContinue}>
-          Continuer — Confirmation
+          Continuer — Instructions
           <ChevronRight size={16} />
         </Button>
       </div>

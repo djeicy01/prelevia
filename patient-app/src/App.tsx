@@ -18,6 +18,7 @@ import Panels        from './pages/nouveau-dossier/Panels'
 import Catalogue     from './pages/nouveau-dossier/Catalogue'
 import Campagne      from './pages/nouveau-dossier/Campagne'
 import Assurance     from './pages/nouveau-dossier/Assurance'
+import PreAnalytique from './pages/nouveau-dossier/PreAnalytique'
 import Confirmation  from './pages/nouveau-dossier/Confirmation'
 
 // Core
@@ -50,7 +51,8 @@ function App() {
         <Route path="/nouveau-dossier/catalogue"    element={<ProtectedRoute><Catalogue /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/campagne"     element={<ProtectedRoute><Campagne /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/assurance"    element={<ProtectedRoute><Assurance /></ProtectedRoute>} />
-        <Route path="/nouveau-dossier/confirmation" element={<ProtectedRoute><Confirmation /></ProtectedRoute>} />
+        <Route path="/nouveau-dossier/pre-analytique" element={<ProtectedRoute><PreAnalytique /></ProtectedRoute>} />
+        <Route path="/nouveau-dossier/confirmation"  element={<ProtectedRoute><Confirmation /></ProtectedRoute>} />
 
         {/* Core flows */}
         <Route path="/paiement"         element={<ProtectedRoute><Paiement /></ProtectedRoute>} />

@@ -7,7 +7,7 @@ import { toast } from '../../components/ui/Toast'
 import { useDossierStore } from '../../store/dossierStore'
 import { useAuthStore } from '../../store/authStore'
 import { dossiersApi } from '../../services/api'
-import { MapPin, Calendar, Clock, CheckCircle, Loader2 } from 'lucide-react'
+import { MapPin, Calendar, Clock, CheckCircle, Loader2, LocateFixed } from 'lucide-react'
 
 const COMMUNES = [
   'Yopougon', 'Cocody', 'Abobo', 'Attécoubé', 'Plateau',
@@ -39,6 +39,54 @@ export default function Confirmation() {
   const [adresse, setAdresse]   = useState('')
   const [creneau, setCreneau]   = useState<{ date: string; heure: string } | null>(null)
   const [loading, setLoading]   = useState(false)
+  const [locating, setLocating] = useState(false)
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast('Géolocalisation non supportée sur cet appareil', 'error')
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=fr`,
+            { headers: { Accept: 'application/json' } }
+          )
+          const data = await res.json()
+          const addr = data.address ?? {}
+
+          // Match commune from Nominatim response
+          const detected = (addr.city_district ?? addr.suburb ?? addr.neighbourhood ?? '').toLowerCase()
+          const matched = COMMUNES.find(c =>
+            detected.includes(c.toLowerCase()) || c.toLowerCase().includes(detected)
+          )
+          if (matched) setCommune(matched)
+
+          // Build address string from available Nominatim fields
+          const parts = [addr.house_number, addr.road, addr.neighbourhood].filter(Boolean)
+          if (parts.length > 0) {
+            setAdresse(parts.join(', '))
+          } else if (data.display_name) {
+            setAdresse(data.display_name.split(',').slice(0, 2).join(',').trim())
+          }
+
+          toast('Position détectée', 'success')
+        } catch {
+          toast('Impossible de déterminer votre adresse', 'error')
+        } finally {
+          setLocating(false)
+        }
+      },
+      () => {
+        toast('Accès à la position refusé', 'error')
+        setLocating(false)
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    )
+  }
 
   const creneaux = genCreneaux()
   const grouped = creneaux.reduce<Record<string, typeof creneaux>>((acc, c) => {
@@ -78,7 +126,7 @@ export default function Confirmation() {
 
   return (
     <AppLayout noNav>
-      <PageHeader title="Confirmation" subtitle="Récapitulatif de votre dossier" back="/nouveau-dossier/assurance" />
+      <PageHeader title="Confirmation" subtitle="Récapitulatif de votre dossier" back="/nouveau-dossier/pre-analytique" />
 
       <div className="px-5 py-5 space-y-4">
         {/* Examens */}
@@ -113,9 +161,21 @@ export default function Confirmation() {
 
         {/* Adresse */}
         <div className="bg-white rounded-2xl border border-[#D4E5E1] p-4 space-y-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <MapPin size={16} className="text-[#064D40]" />
-            <span className="text-sm font-bold text-[#1A2B26]">Adresse de prélèvement</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin size={16} className="text-[#064D40]" />
+              <span className="text-sm font-bold text-[#1A2B26]">Adresse de prélèvement</span>
+            </div>
+            <button
+              onClick={handleGetLocation}
+              disabled={locating}
+              className="flex items-center gap-1.5 text-xs font-semibold text-[#064D40] border border-[#064D40]/30 rounded-lg px-3 py-1.5 hover:bg-[#064D40]/5 disabled:opacity-50 transition-colors"
+            >
+              {locating
+                ? <Loader2 size={12} className="animate-spin" />
+                : <LocateFixed size={12} />}
+              {locating ? 'Localisation…' : 'Utiliser ma position'}
+            </button>
           </div>
           <select
             className="w-full border border-[#D4E5E1] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#064D40]"
