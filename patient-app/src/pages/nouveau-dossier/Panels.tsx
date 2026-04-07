@@ -37,7 +37,7 @@ export default function Panels() {
   const handleNext = () => {
     if (selected.size === 0) { toast('Sélectionnez au moins un panel', 'error'); return }
     const choix = panels.filter(p => selected.has(p.id))
-    const examens = choix.flatMap(p => p.panelExamens.map(pe => pe.catalogue))
+    const examens = choix.flatMap(p => p.examens.map(pe => pe.catalogue))
     const unique = [...new Map(examens.map(e => [e.id, e])).values()]
     setExamens(unique)
     navigate('/nouveau-dossier/assurance')
@@ -51,7 +51,7 @@ export default function Panels() {
 
   const totalExamens = panels
     .filter(p => selected.has(p.id))
-    .flatMap(p => p.panelExamens)
+    .flatMap(p => p.examens)
     .map(pe => pe.catalogue.id)
 
   const uniqueTotal = new Set(totalExamens).size
@@ -72,8 +72,8 @@ export default function Panels() {
               <div className="space-y-2">
                 {panelsList.map(panel => {
                   const isSelected = selected.has(panel.id)
-                  const examCount = panel.panelExamens?.length ?? 0
-                  const total = panel.panelExamens?.reduce((s, pe) => s + pe.catalogue.tarifMax, 0) ?? 0
+                  const examCount = panel.examens?.length ?? 0
+                  const total = panel.examens?.reduce((s, pe) => s + pe.catalogue.tarifMax, 0) ?? 0
                   return (
                     <button
                       key={panel.id}
@@ -95,14 +95,14 @@ export default function Panels() {
                             {examCount} examen(s) · {total.toLocaleString()} XOF
                           </p>
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {panel.panelExamens?.slice(0, 5).map(pe => (
+                            {panel.examens?.slice(0, 5).map(pe => (
                               <span key={pe.catalogue.id} className="text-[10px] bg-[#064D40]/8 text-[#064D40] px-1.5 py-0.5 rounded-md font-semibold">
                                 {pe.catalogue.code}
                               </span>
                             ))}
-                            {(panel.panelExamens?.length ?? 0) > 5 && (
+                            {(panel.examens?.length ?? 0) > 5 && (
                               <span className="text-[10px] text-[#5C7A74] px-1.5 py-0.5">
-                                +{panel.panelExamens.length - 5}
+                                +{panel.examens.length - 5}
                               </span>
                             )}
                           </div>

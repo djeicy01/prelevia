@@ -65,7 +65,7 @@ export interface Panel {
   nom: string
   categorie?: string
   actif: boolean
-  panelExamens: { catalogue: ExamenCatalogue; ordre: number }[]
+  examens: { catalogue: ExamenCatalogue; ordre: number }[]
 }
 
 export interface Dossier {
