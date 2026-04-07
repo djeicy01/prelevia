@@ -56,10 +56,13 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
     }
 
     // Stocker les champs hors-schéma Dossier dans noteAdmin (JSON)
+    // Note : Dossier n'a pas de champ assuranceId — l'assurance est sur Patient.
+    // On stocke ici l'info assurance pour le back-office.
     const meta = {
       creneauDate,
       creneauHeure,
-      ...(assuranceNonPartenaireNom ? { assuranceNonPartenaireNom } : {}),
+      ...(assuranceIdValide         ? { assuranceId: assuranceIdValide }                 : {}),
+      ...(assuranceNonPartenaireNom ? { assuranceNonPartenaireNom }                      : {}),
     }
 
     // Référence unique
@@ -72,16 +75,17 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
     })
 
     // Créer le dossier
+    // Note : Dossier n'a pas de champ assuranceId dans le schéma Prisma.
+    // L'assurance est stockée dans noteAdmin (JSON) et sur le modèle Patient.
     const dossier = await prisma.dossier.create({
       data: {
         ref,
         patientId,
-        statut:         'EN_ATTENTE',
-        ocrSource:      ocrSource ?? 'MANUAL',
-        bulletinUrl:    bulletinUrl ?? null,
-        assuranceId:    assuranceIdValide,
-        campagneId:     campagneIdValide,
-        statutAssurance: assuranceIdValide ? 'DOCS_COLLECTES' : null,
+        statut:          'EN_ATTENTE',
+        ocrSource:       ocrSource ?? 'MANUAL',
+        bulletinUrl:     bulletinUrl ?? null,
+        campagneId:      campagneIdValide,
+        statutAssurance: (assuranceIdValide || assuranceNonPartenaireNom) ? 'DOCS_COLLECTES' : null,
         noteAdmin:       JSON.stringify(meta),
         examens: {
           create: catalogueItems.map(item => ({
@@ -93,10 +97,9 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
         },
       },
       include: {
-        examens:   { include: { catalogue: true } },
-        patient:   { select: { nom: true, prenom: true, telephone: true, commune: true, adresse: true } },
-        assurance: true,
-        campagne:  { select: { nom: true, ref: true } },
+        examens: { include: { catalogue: true } },
+        patient: { select: { nom: true, prenom: true, telephone: true, commune: true, adresse: true } },
+        campagne: { select: { nom: true, ref: true } },
       },
     })
 
@@ -128,8 +131,7 @@ router.get('/', authPatient, async (req: PatientRequest, res: Response) => {
             agent:     { select: { nom: true, prenom: true, telephone: true } },
           },
         },
-        assurance: { select: { nom: true, tauxCouverture: true } },
-        campagne:  { select: { nom: true, ref: true } },
+        campagne: { select: { nom: true, ref: true } },
       },
     })
 
@@ -158,8 +160,7 @@ router.get('/:id', authPatient, async (req: PatientRequest, res: Response) => {
             agent: { select: { nom: true, prenom: true, telephone: true } },
           },
         },
-        assurance: true,
-        campagne:  true,
+        campagne: true,
       },
     })
 
