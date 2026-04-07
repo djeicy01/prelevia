@@ -15,6 +15,7 @@ import Home from './pages/Home'
 import Parcours      from './pages/nouveau-dossier/Parcours'
 import OCR           from './pages/nouveau-dossier/OCR'
 import Panels        from './pages/nouveau-dossier/Panels'
+import Catalogue     from './pages/nouveau-dossier/Catalogue'
 import Campagne      from './pages/nouveau-dossier/Campagne'
 import Assurance     from './pages/nouveau-dossier/Assurance'
 import Confirmation  from './pages/nouveau-dossier/Confirmation'
@@ -46,6 +47,7 @@ function App() {
         <Route path="/nouveau-dossier/parcours"     element={<ProtectedRoute><Parcours /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/ocr"          element={<ProtectedRoute><OCR /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/panels"       element={<ProtectedRoute><Panels /></ProtectedRoute>} />
+        <Route path="/nouveau-dossier/catalogue"    element={<ProtectedRoute><Catalogue /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/campagne"     element={<ProtectedRoute><Campagne /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/assurance"    element={<ProtectedRoute><Assurance /></ProtectedRoute>} />
         <Route path="/nouveau-dossier/confirmation" element={<ProtectedRoute><Confirmation /></ProtectedRoute>} />

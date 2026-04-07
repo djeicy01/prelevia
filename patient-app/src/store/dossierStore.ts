@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ExamenCatalogue } from '../types'
 
-export type ParcourType = 'A' | 'B' | 'C'
+export type ParcourType = 'A' | 'B' | 'C' | 'D'
 
 interface DossierDraft {
   parcours: ParcourType | null

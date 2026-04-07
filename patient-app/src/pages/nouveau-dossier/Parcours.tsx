@@ -2,11 +2,12 @@ import { useNavigate } from 'react-router-dom'
 import { AppLayout } from '../../components/layout/AppLayout'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { useDossierStore } from '../../store/dossierStore'
-import { Camera, Layout, Building2, ChevronRight } from 'lucide-react'
+import type { ParcourType } from '../../store/dossierStore'
+import { Camera, Layout, Building2, BookOpen, ChevronRight } from 'lucide-react'
 
-const OPTIONS = [
+const OPTIONS: { code: ParcourType; icon: JSX.Element; title: string; desc: string; badge: string; badgeColor: string; bg: string; next: string }[] = [
   {
-    code: 'A' as const,
+    code: 'A',
     icon: <Camera size={28} strokeWidth={1.5} className="text-[#064D40]" />,
     title: 'Ordonnance (A)',
     desc: "Photographiez votre bulletin d'analyses. Notre IA extrait automatiquement vos examens.",
@@ -16,7 +17,7 @@ const OPTIONS = [
     next: '/nouveau-dossier/ocr',
   },
   {
-    code: 'B' as const,
+    code: 'B',
     icon: <Layout size={28} strokeWidth={1.5} className="text-[#F4A726]" />,
     title: 'Panels (B)',
     desc: 'Choisissez parmi nos panels prédéfinis : bilan diabète, bilan rénal, thyroïdien…',
@@ -26,7 +27,7 @@ const OPTIONS = [
     next: '/nouveau-dossier/panels',
   },
   {
-    code: 'C' as const,
+    code: 'C',
     icon: <Building2 size={28} strokeWidth={1.5} className="text-[#3B82F6]" />,
     title: 'Code campagne (C)',
     desc: 'Votre employeur ou votre mutuelle vous a fourni un code campagne de prélèvement.',
@@ -35,6 +36,16 @@ const OPTIONS = [
     bg: 'bg-blue-50 border-blue-100',
     next: '/nouveau-dossier/campagne',
   },
+  {
+    code: 'D',
+    icon: <BookOpen size={28} strokeWidth={1.5} className="text-[#7C3AED]" />,
+    title: 'Catalogue (D)',
+    desc: 'Choisissez vos examens un par un dans notre catalogue complet.',
+    badge: 'Libre',
+    badgeColor: 'bg-[#7C3AED] text-white',
+    bg: 'bg-purple-50 border-purple-100',
+    next: '/nouveau-dossier/catalogue',
+  },
 ]
 
 export default function Parcours() {
@@ -42,7 +53,7 @@ export default function Parcours() {
   const setParcours = useDossierStore(s => s.setParcours)
   const reset       = useDossierStore(s => s.reset)
 
-  const handleSelect = (code: 'A' | 'B' | 'C', next: string) => {
+  const handleSelect = (code: ParcourType, next: string) => {
     reset()
     setParcours(code)
     navigate(next)
