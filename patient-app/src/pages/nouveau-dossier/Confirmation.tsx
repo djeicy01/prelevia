@@ -147,18 +147,23 @@ export default function Confirmation() {
             <p className="px-4 py-2 text-xs text-[#5C7A74]">+{store.examensSelectionnes.length - 5} autres</p>
           )}
           <div className="px-4 py-3 bg-[#f0f5f4] flex justify-between">
-            <span className="text-sm font-bold text-[#1A2B26]">Total estimé</span>
+            <span className="text-sm font-bold text-[#1A2B26]">Total à payer</span>
             <span className="text-sm font-extrabold text-[#064D40]">{total.toLocaleString()} XOF</span>
           </div>
         </div>
 
-        {/* Assurance */}
+        {/* Assurance — note remboursement uniquement */}
         {(store.assuranceId || store.assuranceNonPartenaireNom) && (
-          <div className="bg-[#064D40]/5 rounded-xl px-4 py-3 flex items-center gap-2">
-            <CheckCircle size={16} className="text-[#064D40]" />
-            <span className="text-sm font-semibold text-[#064D40]">
-              {store.assuranceId ? 'Assurance partenaire' : store.assuranceNonPartenaireNom}
-            </span>
+          <div className="bg-[#064D40]/5 rounded-xl px-4 py-3 flex items-start gap-2">
+            <CheckCircle size={16} className="text-[#064D40] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-[#064D40]">
+                {store.assuranceId ? 'Assurance partenaire' : store.assuranceNonPartenaireNom}
+              </p>
+              <p className="text-xs text-[#5C7A74] mt-0.5 leading-relaxed">
+                Un dossier de remboursement sera constitué après validation par votre assurance.
+              </p>
+            </div>
           </div>
         )}
 

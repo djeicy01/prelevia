@@ -23,6 +23,7 @@ import panelsRoutes            from './routes/panels'
 import parametresRoutes        from './routes/parametres'
 import rapportsRoutes          from './routes/rapports'
 import patientAuthRouter       from './routes/patientAuth'
+import patientDossiersRouter   from './routes/patientDossiers'
 import assureursInconnusRouter from './routes/assureursInconnus'
 import campagnesRouter         from './routes/campagnes'
 
@@ -38,6 +39,7 @@ app.use('/api/panels',             panelsRoutes)
 app.use('/api/parametres',         parametresRoutes)
 app.use('/api/rapports',           rapportsRoutes)
 app.use('/api/patient',            patientAuthRouter)
+app.use('/api/patient/dossiers',   patientDossiersRouter)
 app.use('/api/assureurs-inconnus', assureursInconnusRouter)
 app.use('/api/campagnes',          campagnesRouter)
 
