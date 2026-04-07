@@ -3,12 +3,14 @@
  *
  * Composant d'autocomplétion d'adresse style Uber/Yango avec carte Leaflet intégrée.
  * Suggestions à partir de 3 caractères, debounce 300 ms.
- * Après sélection d'une suggestion, une carte de 200 px apparaît avec un marqueur
- * déplaçable — le déplacement déclenche un reverse geocoding Nominatim automatique.
+ *
+ * ─── Carte : approche crosshair ───────────────────────────────────────────────
+ *   Après sélection d'une suggestion, une carte 220 px apparaît avec un viseur
+ *   fixe au centre. L'utilisateur déplace la CARTE sous le viseur (comme Uber).
+ *   Sur moveend, un reverse geocoding Nominatim est déclenché sur le centre.
  *
  * ─── CSS Leaflet ──────────────────────────────────────────────────────────────
- *   Importé dans main.tsx (import 'leaflet/dist/leaflet.css') pour garantir
- *   le chargement avant tout rendu de carte.
+ *   Importé dans main.tsx (import 'leaflet/dist/leaflet.css').
  *
  * ─── Provider par défaut : Nominatim OSM ─────────────────────────────────────
  *   Gratuit, sans clé API.
@@ -73,30 +75,6 @@ const COMMUNE_BBOX: Record<string, string> = {
   'Port-Bouët': '-3.97,5.30,-3.86,5.22',
 }
 
-/** SVG DivIcon — évite les problèmes de chemins d'assets Vite avec les icônes Leaflet par défaut */
-function pinIcon(active = false) {
-  const fill    = active ? '#F4A726' : '#064D40'
-  const cursor  = active ? 'grabbing' : 'grab'
-  return L.divIcon({
-    className: '',
-    // Outer wrapper is 44×44 px for mobile touch target; SVG is centered within it.
-    html: `<div style="
-        width:44px;height:44px;
-        display:flex;align-items:flex-end;justify-content:center;
-        cursor:${cursor};
-        filter:drop-shadow(0 3px 6px rgba(0,0,0,.35));
-      ">
-      <svg width="36" height="48" viewBox="0 0 36 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18 0C11.373 0 6 5.373 6 12c0 9 12 24 12 24s12-15 12-24C30 5.373 24.627 0 18 0z" fill="${fill}"/>
-        <circle cx="18" cy="12" r="5.5" fill="white"/>
-      </svg></div>`,
-    // iconSize matches the outer 44×44 div
-    iconSize:   [44, 44],
-    // anchor at the tip of the SVG pin: horizontally centered (22), vertically at the bottom of the pin (44-2px padding = pin tip at ~46px within 44px container → clamp to 44)
-    iconAnchor: [22, 44],
-  })
-}
-
 // ─── Nominatim helpers ────────────────────────────────────────────────────────
 
 interface NominatimResult {
@@ -144,8 +122,8 @@ async function searchNominatim(
   const data: NominatimResult[] = await res.json()
 
   return data.map(item => {
-    const parts   = item.display_name.split(',')
-    const label   = parts[0].trim()
+    const parts    = item.display_name.split(',')
+    const label    = parts[0].trim()
     const sublabel = parts.slice(1, 4).join(',').trim()
     const commune  = detectCommune(item.address, communes)
     const adresse  = parts
@@ -223,34 +201,31 @@ export function AddressAutocomplete({
   const [showMap, setShowMap]         = useState(false)
   const [mapPos, setMapPos]           = useState<[number, number]>(ABIDJAN_CENTER)
   const [reversing, setReversing]     = useState(false)
+  const [moving, setMoving]           = useState(false) // carte en cours de déplacement
 
   const debounceRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef  = useRef<HTMLDivElement>(null)
   const inputRef      = useRef<HTMLInputElement>(null)
   const leafletMapRef = useRef<L.Map | null>(null)
-  const markerRef     = useRef<L.Marker | null>(null)
   const mapPosRef     = useRef<[number, number]>(ABIDJAN_CENTER)
 
-  // Stable refs so dragend always gets the latest callbacks
-  const onSelectRef  = useRef(onSelect)
-  const onChangeRef  = useRef(onChange)
-  const communesRef  = useRef(communes)
-  useEffect(() => { onSelectRef.current  = onSelect  }, [onSelect])
-  useEffect(() => { onChangeRef.current  = onChange  }, [onChange])
-  useEffect(() => { communesRef.current  = communes  }, [communes])
-  useEffect(() => { mapPosRef.current    = mapPos    }, [mapPos])
+  // Stable refs so moveend always gets the latest callbacks
+  const onSelectRef = useRef(onSelect)
+  const onChangeRef = useRef(onChange)
+  const communesRef = useRef(communes)
+  useEffect(() => { onSelectRef.current = onSelect  }, [onSelect])
+  useEffect(() => { onChangeRef.current = onChange  }, [onChange])
+  useEffect(() => { communesRef.current = communes  }, [communes])
+  useEffect(() => { mapPosRef.current   = mapPos    }, [mapPos])
 
   // ── Callback ref: fires the instant the map div mounts/unmounts ─────────────
   const mapContainerCb = useCallback((node: HTMLDivElement | null) => {
-    // Unmount → destroy map
     if (!node) {
       leafletMapRef.current?.remove()
       leafletMapRef.current = null
-      markerRef.current     = null
       return
     }
 
-    // Mount → initialize map immediately
     const pos = mapPosRef.current
     const map = L.map(node, {
       center: pos,
@@ -265,16 +240,12 @@ export function AddressAutocomplete({
       .addAttribution('© <a href="https://osm.org/copyright" target="_blank">OSM</a>')
       .addTo(map)
 
-    const marker = L.marker(pos, { draggable: true, icon: pinIcon() }).addTo(map)
-
-    marker.on('dragstart', () => {
-      map.dragging.disable()
-      marker.setIcon(pinIcon(true))
-    })
-    marker.on('dragend', async () => {
-      map.dragging.enable()
-      marker.setIcon(pinIcon(false))
-      const { lat, lng } = marker.getLatLng()
+    // Crosshair approach: la carte se déplace sous le viseur fixe.
+    // movestart → le pin "décolle" (animation CSS), moveend → reverse geocoding.
+    map.on('movestart', () => setMoving(true))
+    map.on('moveend', async () => {
+      setMoving(false)
+      const { lat, lng } = map.getCenter()
       setReversing(true)
       try {
         const result = await reverseGeocode(lat, lng, communesRef.current)
@@ -286,17 +257,14 @@ export function AddressAutocomplete({
     })
 
     leafletMapRef.current = map
-    markerRef.current     = marker
 
-    // Leaflet needs the container to have a rendered size
     requestAnimationFrame(() => { map.invalidateSize(); map.setView(pos, 16) })
   }, []) // empty deps — only fires on DOM mount/unmount
 
-  // ── Pan + move marker when mapPos changes ────────────────────────────────────
+  // ── Centre la carte sur mapPos quand la position change (ex: sélection suggestion) ──
   useEffect(() => {
-    if (!leafletMapRef.current || !markerRef.current) return
+    if (!leafletMapRef.current) return
     leafletMapRef.current.setView(mapPos, 16, { animate: true })
-    markerRef.current.setLatLng(mapPos)
   }, [mapPos])
 
   // ── Close dropdown on outside click ─────────────────────────────────────────
@@ -429,24 +397,57 @@ export function AddressAutocomplete({
         </div>
       )}
 
-      {/* ── Leaflet map ── */}
+      {/* ── Leaflet map avec crosshair fixe ── */}
       {showMap && (
         <div className="mt-2 rounded-2xl overflow-hidden border border-[#D4E5E1] shadow-sm relative">
-          {/* mapContainerCb fires immediately when this div is added to the DOM */}
-          <div ref={mapContainerCb} style={{ height: 200 }} />
+          {/* Tuiles Leaflet */}
+          <div ref={mapContainerCb} style={{ height: 220 }} />
 
+          {/* ── Viseur fixe au centre (style Uber) ── */}
+          {/* Ombre au sol : s'agrandit quand le pin "décolle" */}
+          <div
+            className="absolute left-1/2 top-1/2 pointer-events-none z-[500] rounded-full bg-black/25"
+            style={{
+              transform:  'translate(-50%, -50%)',
+              width:       moving ? 14 : 8,
+              height:      moving ? 5  : 3,
+              transition:  'all 150ms ease',
+            }}
+          />
+          {/* Pin SVG : se soulève pendant le déplacement de la carte */}
+          <div
+            className="absolute left-1/2 pointer-events-none z-[500]"
+            style={{
+              top:        '50%',
+              transform:  moving
+                ? 'translate(-50%, calc(-100% - 10px))'
+                : 'translate(-50%, -100%)',
+              transition: 'transform 150ms ease',
+              filter:     'drop-shadow(0 4px 8px rgba(0,0,0,.4))',
+            }}
+          >
+            <svg width="38" height="50" viewBox="0 0 38 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 0C12.096 0 6.5 5.596 6.5 12.5c0 9.5 12.5 25 12.5 25s12.5-15.5 12.5-25C31.5 5.596 25.904 0 19 0z" fill="#064D40"/>
+              <circle cx="19" cy="12.5" r="6" fill="white"/>
+            </svg>
+          </div>
+
+          {/* Spinner reverse geocoding */}
           {reversing && (
-            <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-[1000]">
+            <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-[1000]">
               <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow border border-[#D4E5E1]">
                 <Loader2 size={14} className="text-[#064D40] animate-spin" />
-                <span className="text-xs font-semibold text-[#064D40]">Mise à jour de l'adresse…</span>
+                <span className="text-xs font-semibold text-[#064D40]">Mise à jour…</span>
               </div>
             </div>
           )}
 
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 rounded-xl px-3 py-1.5 shadow border border-[#D4E5E1] pointer-events-none flex items-center gap-1.5">
-            <span className="text-sm leading-none">✋</span>
-            <span className="text-xs font-semibold text-[#1A2B26] whitespace-nowrap">Maintenez et glissez pour déplacer</span>
+          {/* Instruction */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">
+            <div className="flex items-center gap-1.5 bg-white/95 rounded-xl px-3 py-1.5 shadow border border-[#D4E5E1] whitespace-nowrap">
+              <span className="text-sm leading-none">🗺️</span>
+              <span className="text-xs font-semibold text-[#1A2B26]">Déplacez la carte pour ajuster</span>
+            </div>
           </div>
         </div>
       )}
