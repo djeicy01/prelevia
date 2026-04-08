@@ -149,7 +149,7 @@ router.get('/:id', authPatient, async (req: PatientRequest, res: Response) => {
     const { id }    = req.params
 
     const dossier = await prisma.dossier.findFirst({
-      where: { id: String(id), patientId: String(patientId) },
+      where: { id: String(req.params.id), patientId: String(patientId) },
       include: {
         examens: {
           include: { catalogue: true },
