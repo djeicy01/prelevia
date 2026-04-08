@@ -7,30 +7,41 @@ import { dossiersApi } from '../services/api'
 import type { Dossier } from '../types'
 import {
   CheckCircle, Circle, Clock, Navigation, Syringe,
-  CreditCard, FlaskConical, FileText, Loader2,
+  CreditCard, FlaskConical, FileText, ShieldCheck, Loader2,
 } from 'lucide-react'
 
+// Ordre logique du parcours patient — 8 étapes
 const STEPS = [
-  { key: 'RDV',         label: 'RDV créé',              icon: FileText    },
-  { key: 'DOCS',        label: 'Documents envoyés',     icon: FileText    },
-  { key: 'OCR',         label: 'Examens analysés',      icon: FlaskConical },
-  { key: 'ASSURANCE',   label: 'Assurance soumise',     icon: CheckCircle },
-  { key: 'EN_ROUTE',    label: 'Agent en route',        icon: Navigation  },
-  { key: 'PRELEVEMENT', label: 'Prélèvement effectué', icon: Syringe     },
-  { key: 'PAIEMENT',    label: 'Paiement confirmé',     icon: CreditCard  },
-  { key: 'RESULTATS',   label: 'Résultats disponibles', icon: CheckCircle },
+  { key: 'RDV',        label: 'RDV créé',                  icon: FileText    }, // 0
+  { key: 'EN_ROUTE',   label: 'Agent en route',             icon: Navigation  }, // 1
+  { key: 'PRELEVEMENT',label: 'Prélèvement effectué',       icon: Syringe     }, // 2
+  { key: 'PAIEMENT',   label: 'Paiement confirmé',          icon: CreditCard  }, // 3
+  { key: 'DOCS_LABO',  label: 'Documents envoyés au labo',  icon: FileText    }, // 4
+  { key: 'ASSURANCE',  label: 'Assurance soumise',          icon: ShieldCheck }, // 5
+  { key: 'ANALYSES',   label: 'Examens analysés',           icon: FlaskConical}, // 6
+  { key: 'RESULTATS',  label: 'Résultats disponibles',      icon: CheckCircle }, // 7
 ]
 
+/**
+ * Retourne le nombre d'étapes complétées (0–8) selon le statut Prisma du dossier.
+ *
+ * Mapping statuts → étapes terminées :
+ *   EN_ATTENTE             → 1  (RDV créé ✓ ; Agent en route = en cours)
+ *   PRET_PRELEVEMENT       → 1  (agent assigné/en route = toujours en cours)
+ *   PRELEVEMENT_FAIT       → 3  (+ Agent en route ✓ + Prélèvement ✓ ; Paiement = en cours)
+ *   PAYE                   → 4  (+ Paiement ✓ ; Docs labo = en cours)
+ *   RESULTATS_EN_COURS     → 6  (+ Docs ✓ + Assurance ✓ ; Examens = en cours)
+ *   RESULTATS_DISPONIBLES  → 8
+ *   ARCHIVE                → 8
+ */
 function getCompletedSteps(dossier: Dossier): number {
   const s = dossier.statut
-  if (s === 'ARCHIVE') return 8
-  if (s === 'PAYE') return 7
-  if (s === 'PRELEVEMENT_FAIT') return 6
-  if (s === 'PRET_PRELEVEMENT') {
-    if (dossier.missionId) return 5
-    return 4
-  }
-  return dossier.bulletinUrl ? 3 : 2
+  if (s === 'RESULTATS_DISPONIBLES' || s === 'ARCHIVE') return 8
+  if (s === 'RESULTATS_EN_COURS')  return 6
+  if (s === 'PAYE')                return 4
+  if (s === 'PRELEVEMENT_FAIT')    return 3
+  // EN_ATTENTE ou PRET_PRELEVEMENT : agent en route = étape courante
+  return 1
 }
 
 export default function Suivi() {
