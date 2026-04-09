@@ -27,12 +27,13 @@ export default function AssurancePage() {
   }, [])
 
   const handleNext = () => {
-    if (mode === 'partenaire' && !selected) return
-    if (mode === 'autre') {
-      setAssurance(null, nonPartenaire || 'Autre assurance')
-    } else if (mode === 'partenaire') {
-      setAssurance(selected!, undefined)
+    if (mode === 'partenaire') {
+      if (!selected) return               // garde — ne devrait pas arriver (bouton désactivé)
+      setAssurance(selected, undefined)
+    } else if (mode === 'autre') {
+      setAssurance(null, nonPartenaire.trim() || 'Autre assurance')
     } else {
+      // mode === 'sans' : assuranceId doit être null
       setAssurance(null, undefined)
     }
     navigate('/nouveau-dossier/pre-analytique')
