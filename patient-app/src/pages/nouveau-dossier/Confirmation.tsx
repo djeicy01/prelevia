@@ -105,18 +105,21 @@ export default function Confirmation() {
     if (!adresse.trim()) { toast('Entrez votre adresse', 'error'); return }
     setLoading(true)
     try {
-      const dossier = await dossiersApi.createDossier({
-        examens: store.examensSelectionnes.map(e => e.id),
-        ocrSource: store.ocrSource,
-        bulletinUrl: store.bulletinUrl ?? undefined,
-        assuranceId: store.assuranceId ?? undefined,
-        assuranceNonPartenaireNom: store.assuranceNonPartenaireNom ?? undefined,
-        campagneCode: store.campagneCode ?? undefined,
+      // Construire le payload sans les champs null/vides — assuranceId ne doit
+      // JAMAIS apparaître dans le body quand aucune assurance n'est sélectionnée.
+      const payload: Parameters<typeof dossiersApi.createDossier>[0] = {
+        examens:     store.examensSelectionnes.map(e => e.id),
+        ocrSource:   store.ocrSource,
         commune,
         adresse,
-        creneauDate: creneau.date,
+        creneauDate:  creneau.date,
         creneauHeure: creneau.heure,
-      })
+        ...(store.bulletinUrl                ? { bulletinUrl:                store.bulletinUrl                } : {}),
+        ...(store.assuranceId                ? { assuranceId:                store.assuranceId                } : {}),
+        ...(store.assuranceNonPartenaireNom  ? { assuranceNonPartenaireNom:  store.assuranceNonPartenaireNom  } : {}),
+        ...(store.campagneCode               ? { campagneCode:               store.campagneCode               } : {}),
+      }
+      const dossier = await dossiersApi.createDossier(payload)
       reset()
       navigate(`/suivi/${dossier.id}`, { replace: true })
     } catch (err: unknown) {
