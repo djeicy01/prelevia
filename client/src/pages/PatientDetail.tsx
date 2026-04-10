@@ -171,6 +171,20 @@ export default function PatientDetail() {
   const [loading, setLoading] = useState(true)
   const [showAssign, setShowAssign] = useState(false)
   const [toast, setToast]     = useState<string | null>(null)
+  // id → nom pour résoudre assuranceId dans noteAdmin
+  const [assurancesMap, setAssurancesMap] = useState<Record<string, string>>({})
+
+  // Charger la liste des assurances une fois pour la résolution noteAdmin
+  useEffect(() => {
+    api.get('/assurances')
+      .then(r => {
+        const list: Array<{ id: string; nom: string }> = r.data.assurances ?? r.data ?? []
+        const map: Record<string, string> = {}
+        list.forEach(a => { map[a.id] = a.nom })
+        setAssurancesMap(map)
+      })
+      .catch(() => {})
+  }, [])
 
   function load() {
     if (!id) return
@@ -235,10 +249,9 @@ export default function PatientDetail() {
       }
 
       if (data.assuranceId) {
-        const nom = patient?.assurance?.id === data.assuranceId
-          ? patient.assurance!.nom
-          : data.assuranceId
-        rows.push({ label: 'Assurance', value: nom })
+        // Résoudre via la map fetchée — ne pas afficher si ID inconnu ou absent
+        const nom = assurancesMap[data.assuranceId]
+        if (nom) rows.push({ label: 'Assurance', value: nom })
       }
 
       if (data.assuranceNonPartenaireNom) {
@@ -369,7 +382,7 @@ export default function PatientDetail() {
                   {partPatient.toLocaleString()} XOF
                 </span>
               } />
-            {(patient?.assurance || dossier.statutAssurance) && (
+            {!!dossier.statutAssurance && (
               <p className="text-xs mt-2 pt-2 border-t" style={{ borderColor: BD, color: TL }}>
                 Remboursement possible après validation assurance.
               </p>
