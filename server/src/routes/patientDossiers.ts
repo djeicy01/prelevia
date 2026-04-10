@@ -34,6 +34,9 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
     if (!creneauDate || !creneauHeure)
       return res.status(400).json({ error: 'creneauDate et creneauHeure sont obligatoires' })
 
+    const communeN = String(commune).toUpperCase().trim()
+    const adresseN = String(adresse).toUpperCase().trim()
+
     // Charger les tarifs pour figer le prix à la création
     const catalogueItems = await prisma.examenCatalogue.findMany({
       where: { id: { in: examens }, actif: true },
@@ -76,7 +79,7 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
     // Mettre à jour commune + adresse sur le patient
     await prisma.patient.update({
       where: { id: patientId },
-      data:  { commune, adresse },
+      data:  { commune: communeN, adresse: adresseN },
     })
 
     // Créer le dossier
