@@ -445,8 +445,14 @@ export default function PatientDetail() {
                 </thead>
                 <tbody>
                   {examens.map((e, i) => {
-                    const couvert    = e.couvert === true
-                    const partPat    = couvert ? Math.round(e.tarif * 0.2) : e.tarif
+                    // La part patient n'est calculable qu'après validation assurance
+                    const assuranceValidee =
+                      dossier.statutAssurance === 'VALIDE_TOTAL' ||
+                      dossier.statutAssurance === 'VALIDE_PARTIEL'
+                    const couvert = e.couvert === true
+                    const partPat = couvert ? Math.round(e.tarif * 0.2) : e.tarif
+                    // Afficher la part seulement si assurance validée et couverture connue
+                    const showPartPat = assuranceValidee && e.couvert !== null && e.couvert !== undefined
                     return (
                       <tr key={e.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
                         <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: P }}>
@@ -467,8 +473,8 @@ export default function PatientDetail() {
                             <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: AC }}>
-                          {partPat.toLocaleString()}
+                        <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: showPartPat ? TX : TL }}>
+                          {showPartPat ? partPat.toLocaleString() : '—'}
                         </td>
                       </tr>
                     )
