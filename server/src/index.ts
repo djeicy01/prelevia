@@ -26,6 +26,8 @@ import patientAuthRouter       from './routes/patientAuth'
 import patientDossiersRouter   from './routes/patientDossiers'
 import assureursInconnusRouter from './routes/assureursInconnus'
 import campagnesRouter         from './routes/campagnes'
+import usersRouter            from './routes/users'
+import laboRouter             from './routes/labo'
 
 app.use('/api/auth',               authRoutes)
 app.use('/api/assurances',         assurancesRoutes)
@@ -42,6 +44,8 @@ app.use('/api/patient',            patientAuthRouter)
 app.use('/api/patient/dossiers',   patientDossiersRouter)
 app.use('/api/assureurs-inconnus', assureursInconnusRouter)
 app.use('/api/campagnes',          campagnesRouter)
+app.use('/api/users',              usersRouter)
+app.use('/api/labo',               laboRouter)
 
 // ─── ROUTE DE TEST ────────────────────────────────────────
 app.get('/api/health', (req, res) => {
