@@ -7,6 +7,8 @@ import {
   getCatalogue, createExamen, updateExamen,
   getPanels, createPanel, updatePanel, updatePanelExamens,
 } from '../services/parametres'
+import { usersService, type UserRecord } from '../services/users'
+import { useAuthStore } from '../store/authStore'
 
 // ── Design tokens ────────────────────────────────────────────
 const P  = '#0A6E5C'
@@ -598,18 +600,224 @@ function TabPanels({ panels, catalogue, onRefresh }: { panels: Panel[]; catalogu
 }
 
 // ─────────────────────────────────────────────────────────────
+// TAB: UTILISATEURS (SUPER_ADMIN uniquement)
+// ─────────────────────────────────────────────────────────────
+const ROLES = ['ADMIN', 'COORDINATEUR', 'COMPTABLE', 'LABO']
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN:  'Super Admin',
+  ADMIN:        'Admin',
+  COORDINATEUR: 'Coordinateur',
+  COMPTABLE:    'Comptable',
+  LABO:         'Laboratoire',
+}
+
+const EMPTY_USER_FORM = { nom: '', prenom: '', email: '', password: '', role: 'ADMIN' }
+
+function TabUtilisateurs() {
+  const [users, setUsers]         = useState<UserRecord[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [modal, setModal]         = useState<'add' | UserRecord | null>(null)
+  const [pwModal, setPwModal]     = useState<UserRecord | null>(null)
+  const [form, setForm]           = useState({ ...EMPTY_USER_FORM })
+  const [newPw, setNewPw]         = useState('')
+  const [saving, setSaving]       = useState(false)
+  const [toast, setToast]         = useState<{ msg: string; ok: boolean } | null>(null)
+
+  function showToast(msg: string, ok = true) {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function loadUsers() {
+    setLoading(true)
+    try {
+      const r = await usersService.getAll()
+      setUsers(r.data)
+    } catch { showToast('Erreur chargement', false) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { loadUsers() }, [])
+
+  function openAdd() { setForm({ ...EMPTY_USER_FORM }); setModal('add') }
+  function openEdit(u: UserRecord) { setModal(u) }
+
+  async function saveUser() {
+    setSaving(true)
+    try {
+      if (modal === 'add') {
+        if (!form.nom || !form.prenom || !form.email || !form.password) {
+          showToast('Tous les champs sont obligatoires', false); setSaving(false); return
+        }
+        await usersService.create(form)
+        showToast('Utilisateur créé')
+      } else {
+        await usersService.update((modal as UserRecord).id, { role: form.role })
+        showToast('Rôle mis à jour')
+      }
+      setModal(null)
+      loadUsers()
+    } catch (err: any) {
+      showToast(err.response?.data?.error ?? 'Erreur', false)
+    } finally { setSaving(false) }
+  }
+
+  async function resetPw() {
+    if (!pwModal || !newPw.trim()) { showToast('Mot de passe requis', false); return }
+    setSaving(true)
+    try {
+      await usersService.update(pwModal.id, { password: newPw })
+      showToast('Mot de passe réinitialisé')
+      setPwModal(null); setNewPw('')
+    } catch { showToast('Erreur', false) }
+    finally { setSaving(false) }
+  }
+
+  async function toggleActif(u: UserRecord) {
+    try {
+      if (u.actif) {
+        await usersService.disable(u.id)
+      } else {
+        await usersService.update(u.id, { actif: true })
+      }
+      loadUsers()
+    } catch (err: any) {
+      showToast(err.response?.data?.error ?? 'Erreur', false)
+    }
+  }
+
+  const ROLE_COLORS: Record<string, string> = {
+    SUPER_ADMIN:  '#7C3AED', ADMIN: P, COORDINATEUR: '#F97316',
+    COMPTABLE: '#3B82F6', LABO: '#2CB67D',
+  }
+
+  return (
+    <div>
+      {toast && <Toast {...toast} />}
+
+      {/* Modale création / changement rôle */}
+      {modal && (
+        <Modal
+          title={modal === 'add' ? 'Nouvel utilisateur' : `Modifier — ${(modal as UserRecord).prenom} ${(modal as UserRecord).nom}`}
+          onClose={() => setModal(null)}
+        >
+          {modal === 'add' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Prénom *"><Input value={form.prenom} onChange={(v: string) => setForm(f => ({ ...f, prenom: v }))} /></Field>
+                <Field label="Nom *"><Input value={form.nom} onChange={(v: string) => setForm(f => ({ ...f, nom: v }))} /></Field>
+              </div>
+              <Field label="Email *"><Input type="email" value={form.email} onChange={(v: string) => setForm(f => ({ ...f, email: v }))} /></Field>
+              <Field label="Mot de passe *"><Input type="password" value={form.password} onChange={(v: string) => setForm(f => ({ ...f, password: v }))} /></Field>
+            </>
+          )}
+          <Field label="Rôle">
+            <select
+              value={form.role}
+              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+              style={{ borderColor: BD, color: TX }}
+            >
+              {(modal === 'add' ? ROLES : ['ADMIN', 'COORDINATEUR', 'COMPTABLE', 'LABO']).map(r => (
+                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+              ))}
+            </select>
+          </Field>
+          {modal !== 'add' && (
+            <p className="text-xs" style={{ color: TL }}>Seul le rôle peut être modifié ici. Utilisez "Réinit. mdp" pour changer le mot de passe.</p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Btn variant="ghost" onClick={() => setModal(null)}>Annuler</Btn>
+            <Btn onClick={saveUser} disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modale réinitialisation mdp */}
+      {pwModal && (
+        <Modal title={`Réinitialiser mdp — ${pwModal.prenom} ${pwModal.nom}`} onClose={() => { setPwModal(null); setNewPw('') }}>
+          <Field label="Nouveau mot de passe">
+            <Input type="password" value={newPw} onChange={(v: string) => setNewPw(v)} placeholder="Min. 8 caractères" />
+          </Field>
+          <div className="flex justify-end gap-2 pt-2">
+            <Btn variant="ghost" onClick={() => { setPwModal(null); setNewPw('') }}>Annuler</Btn>
+            <Btn variant="accent" onClick={resetPw} disabled={saving || !newPw.trim()}>Réinitialiser</Btn>
+          </div>
+        </Modal>
+      )}
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm" style={{ color: TL }}>{users.length} utilisateur(s)</p>
+        <Btn onClick={openAdd}>+ Ajouter</Btn>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="text-center py-12 text-sm" style={{ color: TL }}>Chargement…</div>
+      ) : (
+        <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: BD }}>
+          <table className="w-full text-sm">
+            <thead style={{ background: BG }}>
+              <tr>
+                {['Utilisateur', 'Email', 'Rôle', 'Statut', ''].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: TL }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u, i) => (
+                <tr key={u.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-sm" style={{ color: TX }}>{u.prenom} {u.nom}</p>
+                    <p className="text-xs" style={{ color: TL }}>depuis {new Date(u.createdAt).toLocaleDateString('fr-FR')}</p>
+                  </td>
+                  <td className="px-4 py-3 text-sm" style={{ color: TL }}>{u.email}</td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${ROLE_COLORS[u.role] ?? P}20`, color: ROLE_COLORS[u.role] ?? P }}>
+                      {ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3"><Badge actif={u.actif} /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <Btn small variant="ghost" onClick={() => { openEdit(u); setForm(f => ({ ...f, role: u.role })) }}>Rôle</Btn>
+                      <Btn small variant="ghost" onClick={() => setPwModal(u)}>Réinit. mdp</Btn>
+                      <Btn small variant={u.actif ? 'danger' : 'ghost'} onClick={() => toggleActif(u)}>
+                        {u.actif ? 'Désactiver' : 'Activer'}
+                      </Btn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {users.length === 0 && (
+            <div className="text-center py-12 text-sm" style={{ color: TL }}>Aucun utilisateur</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // PAGE PRINCIPALE
 // ─────────────────────────────────────────────────────────────
-type Tab = 'general' | 'sms' | 'catalogue' | 'panels'
+type Tab = 'general' | 'sms' | 'catalogue' | 'panels' | 'utilisateurs'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'general',   label: 'Général' },
-  { id: 'sms',       label: 'Templates SMS' },
-  { id: 'catalogue', label: 'Catalogue examens' },
-  { id: 'panels',    label: 'Panels d\'analyses' },
+const TABS: { id: Tab; label: string; superAdminOnly?: boolean }[] = [
+  { id: 'general',      label: 'Général' },
+  { id: 'sms',          label: 'Templates SMS' },
+  { id: 'catalogue',    label: 'Catalogue examens' },
+  { id: 'panels',       label: 'Panels d\'analyses' },
+  { id: 'utilisateurs', label: 'Utilisateurs', superAdminOnly: true },
 ]
 
 export default function Parametres() {
+  const currentUser             = useAuthStore(s => s.user)
+  const isSuperAdmin            = currentUser?.role === 'SUPER_ADMIN'
   const [tab, setTab]           = useState<Tab>('general')
   const [params, setParams]     = useState<Param[]>([])
   const [labo, setLabo]         = useState<Labo | null>(null)
@@ -618,6 +826,8 @@ export default function Parametres() {
   const [catalogue, setCatalogue] = useState<Examen[]>([])
   const [panels, setPanels]     = useState<Panel[]>([])
   const [loading, setLoading]   = useState(true)
+
+  const visibleTabs = TABS.filter(t => !t.superAdminOnly || isSuperAdmin)
 
   async function loadAll() {
     try {
@@ -644,7 +854,7 @@ export default function Parametres() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 border" style={{ borderColor: BD }}>
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -665,10 +875,11 @@ export default function Parametres() {
         </div>
       ) : (
         <>
-          {tab === 'general'   && <TabGeneral params={params} labo={labo} zones={zones} onRefresh={loadAll} />}
-          {tab === 'sms'       && <TabSMS templates={templates} onRefresh={() => getTemplatesSMS().then(setTpl)} />}
-          {tab === 'catalogue' && <TabCatalogue catalogue={catalogue} onRefresh={() => getCatalogue().then(setCatalogue)} />}
-          {tab === 'panels'    && <TabPanels panels={panels} catalogue={catalogue} onRefresh={() => getPanels().then(setPanels)} />}
+          {tab === 'general'       && <TabGeneral params={params} labo={labo} zones={zones} onRefresh={loadAll} />}
+          {tab === 'sms'           && <TabSMS templates={templates} onRefresh={() => getTemplatesSMS().then(setTpl)} />}
+          {tab === 'catalogue'     && <TabCatalogue catalogue={catalogue} onRefresh={() => getCatalogue().then(setCatalogue)} />}
+          {tab === 'panels'        && <TabPanels panels={panels} catalogue={catalogue} onRefresh={() => getPanels().then(setPanels)} />}
+          {tab === 'utilisateurs'  && isSuperAdmin && <TabUtilisateurs />}
         </>
       )}
     </div>
