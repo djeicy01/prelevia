@@ -7,6 +7,7 @@
     "start": "node dist/index.js",
     "seed": "ts-node prisma/seed.ts",
     "seed:preanalytique": "ts-node src/seeds/preanalytique.ts",
+    "reset:dossiers": "ts-node src/seeds/reset-dossiers.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
