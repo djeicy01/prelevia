@@ -33,7 +33,12 @@ export default function Register() {
     if (!validate()) return
     setLoading(true)
     try {
-      await authApi.register(form)
+      await authApi.register({
+        ...form,
+        nom:     form.nom.toUpperCase().trim(),
+        prenom:  form.prenom.toUpperCase().trim(),
+        commune: form.commune.toUpperCase().trim(),
+      })
       toast('Compte créé ! Un code vous sera envoyé par SMS.', 'success')
       navigate('/login', { state: { telephone: form.telephone } })
     } catch (err: unknown) {
@@ -68,14 +73,16 @@ export default function Register() {
             label="Prénom"
             placeholder="ex : Kouamé"
             value={form.prenom}
-            onChange={e => set('prenom', e.target.value)}
+            onChange={e => set('prenom', e.target.value.toUpperCase())}
+            className="uppercase"
             error={errors.prenom}
           />
           <Input
             label="Nom de famille"
             placeholder="ex : Brou"
             value={form.nom}
-            onChange={e => set('nom', e.target.value)}
+            onChange={e => set('nom', e.target.value.toUpperCase())}
+            className="uppercase"
             error={errors.nom}
           />
         </div>
