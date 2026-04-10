@@ -41,11 +41,16 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
     if (catalogueItems.length === 0)
       return res.status(400).json({ error: 'Aucun examen valide trouvé dans le catalogue' })
 
-    // Vérifier l'assurance partenaire si fournie
+    // Vérifier que l'assuranceId fourni existe réellement en base.
+    // Si l'ID est inconnu → ignorer silencieusement (pas d'erreur 400).
     let assuranceIdValide: string | null = null
     if (assuranceId) {
       const assurance = await prisma.assurance.findUnique({ where: { id: assuranceId } })
-      if (assurance) assuranceIdValide = assuranceId
+      if (assurance) {
+        assuranceIdValide = assuranceId
+      } else {
+        console.warn(`[POST /patient/dossiers] assuranceId "${assuranceId}" introuvable en base — ignoré`)
+      }
     }
 
     // Lookup campagne par code (= Campagne.ref)
