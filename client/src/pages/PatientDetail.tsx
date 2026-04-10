@@ -437,7 +437,7 @@ export default function PatientDetail() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ background: BG }}>
-                    {['Code', 'Examen', 'Tarif', 'Couverture', 'Part patient'].map(h => (
+                    {['Code', 'Examen', 'Tarif', ...(dossier.statutAssurance ? ['Couverture', 'Part patient'] : [])].map(h => (
                       <th key={h} className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide"
                         style={{ color: TL }}>{h}</th>
                     ))}
@@ -464,18 +464,22 @@ export default function PatientDetail() {
                         <td className="px-3 py-2.5 text-right font-mono text-xs">
                           {e.tarif.toLocaleString()}
                         </td>
-                        <td className="px-3 py-2.5">
-                          {e.couvert === null || e.couvert === undefined ? (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
-                          ) : couvert ? (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#D1FAE5', color: '#065F46' }}>Couvert 80%</span>
-                          ) : (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: showPartPat ? TX : TL }}>
-                          {showPartPat ? partPat.toLocaleString() : '—'}
-                        </td>
+                        {dossier.statutAssurance && (
+                          <td className="px-3 py-2.5">
+                            {e.couvert === null || e.couvert === undefined ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
+                            ) : couvert ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#D1FAE5', color: '#065F46' }}>Couvert 80%</span>
+                            ) : (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
+                            )}
+                          </td>
+                        )}
+                        {dossier.statutAssurance && (
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: showPartPat ? TX : TL }}>
+                            {showPartPat ? partPat.toLocaleString() : '—'}
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
