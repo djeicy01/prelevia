@@ -235,52 +235,68 @@ export default function PatientDetail() {
     ? ASSURANCE_STEPS.indexOf(dossier.statutAssurance as AssuranceStatut)
     : -1
 
-  // ── Parse noteAdmin JSON en affichage lisible ─────────────────
-  function renderNoteAdmin(raw: string) {
-    try {
-      const data = JSON.parse(raw)
-      const rows: { label: string; value: string }[] = []
+  // ── Parse noteAdmin une seule fois pour tout le composant ──────
+  const noteAdminData: Record<string, unknown> = (() => {
+    try { return dossier.noteAdmin ? JSON.parse(dossier.noteAdmin) : {} }
+    catch { return {} }
+  })()
 
-      if (data.creneauDate) {
-        const dateStr = new Date(data.creneauDate).toLocaleDateString('fr-FR', {
-          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-        })
-        rows.push({ label: 'Créneau', value: `${dateStr}${data.creneauHeure ? ` à ${data.creneauHeure}` : ''}` })
-      }
+  // Assurance réellement liée : patient.assurance OU assuranceId résolu dans la map
+  // OU assureur non-partenaire déclaré dans noteAdmin
+  const resolvedAssuranceNom = noteAdminData.assuranceId
+    ? assurancesMap[noteAdminData.assuranceId as string] ?? null
+    : null
+  const hasAssurance =
+    !!patient?.assurance ||
+    !!resolvedAssuranceNom ||
+    !!(noteAdminData.assuranceNonPartenaireNom as string | undefined)
 
-      if (data.assuranceId) {
-        // Résoudre via la map fetchée — ne pas afficher si ID inconnu ou absent
-        const nom = assurancesMap[data.assuranceId]
-        if (nom) rows.push({ label: 'Assurance', value: nom })
-      }
+  // ── Rendu note admin (utilise noteAdminData pré-parsé) ─────────
+  function renderNoteAdmin() {
+    if (!dossier.noteAdmin) return null
 
-      if (data.assuranceNonPartenaireNom) {
-        rows.push({ label: 'Assurance (non partenaire)', value: data.assuranceNonPartenaireNom })
-      }
-
-      // Autres champs inconnus → liste clé/valeur
-      const knownKeys = new Set(['creneauDate', 'creneauHeure', 'assuranceId', 'assuranceNonPartenaireNom'])
-      for (const [key, val] of Object.entries(data)) {
-        if (!knownKeys.has(key) && val !== null && val !== undefined && val !== '') {
-          rows.push({ label: key, value: String(val) })
-        }
-      }
-
-      if (rows.length === 0) return <p className="text-sm" style={{ color: TL }}>—</p>
-      return (
-        <div className="space-y-2">
-          {rows.map(r => (
-            <div key={r.label} className="flex items-start gap-3">
-              <span className="text-xs font-semibold shrink-0 w-36" style={{ color: TL }}>{r.label}</span>
-              <span className="text-sm" style={{ color: TX }}>{r.value}</span>
-            </div>
-          ))}
-        </div>
-      )
-    } catch {
-      // JSON invalide — afficher tel quel
-      return <p className="text-sm whitespace-pre-wrap" style={{ color: TX }}>{raw}</p>
+    // Si JSON invalide → afficher tel quel
+    if (typeof noteAdminData !== 'object' || Array.isArray(noteAdminData)) {
+      return <p className="text-sm whitespace-pre-wrap" style={{ color: TX }}>{dossier.noteAdmin}</p>
     }
+
+    const rows: { label: string; value: string }[] = []
+
+    if (noteAdminData.creneauDate) {
+      const dateStr = new Date(noteAdminData.creneauDate as string).toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      })
+      rows.push({ label: 'Créneau', value: `${dateStr}${noteAdminData.creneauHeure ? ` à ${noteAdminData.creneauHeure}` : ''}` })
+    }
+
+    // Assurance partenaire : affichée seulement si l'ID est résolu dans la map
+    if (resolvedAssuranceNom) {
+      rows.push({ label: 'Assurance', value: resolvedAssuranceNom })
+    }
+
+    if (noteAdminData.assuranceNonPartenaireNom) {
+      rows.push({ label: 'Assurance (non partenaire)', value: noteAdminData.assuranceNonPartenaireNom as string })
+    }
+
+    // Autres champs inconnus → liste clé/valeur
+    const knownKeys = new Set(['creneauDate', 'creneauHeure', 'assuranceId', 'assuranceNonPartenaireNom'])
+    for (const [key, val] of Object.entries(noteAdminData)) {
+      if (!knownKeys.has(key) && val !== null && val !== undefined && val !== '') {
+        rows.push({ label: key, value: String(val) })
+      }
+    }
+
+    if (rows.length === 0) return <p className="text-sm" style={{ color: TL }}>—</p>
+    return (
+      <div className="space-y-2">
+        {rows.map(r => (
+          <div key={r.label} className="flex items-start gap-3">
+            <span className="text-xs font-semibold shrink-0 w-36" style={{ color: TL }}>{r.label}</span>
+            <span className="text-sm" style={{ color: TX }}>{r.value}</span>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
@@ -382,7 +398,7 @@ export default function PatientDetail() {
                   {partPatient.toLocaleString()} XOF
                 </span>
               } />
-            {!!dossier.statutAssurance && (
+            {!!dossier.statutAssurance && hasAssurance && (
               <p className="text-xs mt-2 pt-2 border-t" style={{ borderColor: BD, color: TL }}>
                 Remboursement possible après validation assurance.
               </p>
@@ -549,7 +565,7 @@ export default function PatientDetail() {
           {/* Note admin */}
           {dossier.noteAdmin && (
             <Card title="Note administrative">
-              {renderNoteAdmin(dossier.noteAdmin)}
+              {renderNoteAdmin()}
             </Card>
           )}
         </div>
