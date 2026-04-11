@@ -26,13 +26,13 @@ export default function LaboLogin() {
       const res = await axios.post('/api/auth/login', { email, password })
       const { token, user } = res.data
 
-      if (!['LABO', 'SUPER_ADMIN', 'ADMIN'].includes(user.role)) {
-        setError('Accès réservé aux utilisateurs du laboratoire')
+      if (user.role !== 'LABO') {
+        setError('Accès réservé aux comptes laboratoire. Utilisez le back-office pour les autres rôles.')
         return
       }
 
       login(token, user)
-      navigate('/labo', { replace: true })
+      navigate('/labo/dashboard', { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Identifiants invalides')
     } finally {
