@@ -602,7 +602,7 @@ function TabPanels({ panels, catalogue, onRefresh }: { panels: Panel[]; catalogu
 // ─────────────────────────────────────────────────────────────
 // TAB: UTILISATEURS (SUPER_ADMIN uniquement)
 // ─────────────────────────────────────────────────────────────
-const ROLES = ['ADMIN', 'COORDINATEUR', 'COMPTABLE', 'LABO']
+const ROLES = ['ADMIN', 'COORDINATEUR', 'COMPTABLE']
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN:  'Super Admin',
   ADMIN:        'Admin',
@@ -718,7 +718,7 @@ function TabUtilisateurs() {
               className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
               style={{ borderColor: BD, color: TX }}
             >
-              {(modal === 'add' ? ROLES : ['ADMIN', 'COORDINATEUR', 'COMPTABLE', 'LABO']).map(r => (
+              {(modal === 'add' ? ROLES : ['ADMIN', 'COORDINATEUR', 'COMPTABLE']).map(r => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
               ))}
             </select>
