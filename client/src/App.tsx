@@ -44,8 +44,9 @@ export default function App() {
           </Route>
         </Route>
         {/* ─── Portail Laboratoire ─────────────── */}
-        <Route path="/labo/login" element={<LaboLogin />} />
-        <Route path="/labo" element={<LaboProtectedRoute><LaboDossiers /></LaboProtectedRoute>} />
+        <Route path="/labo/login"      element={<LaboLogin />} />
+        <Route path="/labo/dashboard"  element={<LaboProtectedRoute><LaboDossiers /></LaboProtectedRoute>} />
+        <Route path="/labo"            element={<Navigate to="/labo/login" replace />} />
       </Routes>
     </BrowserRouter>
   )
