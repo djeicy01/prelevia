@@ -381,9 +381,13 @@ export default function PatientDetail() {
             <Row label="Assurance"  value={
               patient?.assurance
                 ? <span className="font-semibold" style={{ color: P }}>{patient.assurance.nom}</span>
-                : <span style={{ color: TL }}>Aucune</span>
+                : resolvedAssuranceNom
+                  ? <span className="font-semibold" style={{ color: P }}>{resolvedAssuranceNom}</span>
+                  : (noteAdminData.assuranceNonPartenaireNom as string | undefined)
+                    ? <span className="font-semibold" style={{ color: P }}>{noteAdminData.assuranceNonPartenaireNom as string}</span>
+                    : <span style={{ color: TL }}>Aucune</span>
             } />
-            {patient?.assurance && (
+            {(patient?.assurance) && (
               <Row label="Taux couverture" value={`${patient.assurance.tauxCouverture}%`} />
             )}
           </Card>
