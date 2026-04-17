@@ -73,8 +73,10 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
       ...(assuranceNonPartenaireNom ? { assuranceNonPartenaireNom }                      : {}),
     }
 
-    // Référence unique
-    const ref = `DOS-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    // Générer la référence DOS-YYYY-NNNNN (auto-incrémenté par année)
+    const year      = new Date().getFullYear()
+    const yearCount = await prisma.dossier.count({ where: { ref: { startsWith: `DOS-${year}-` } } })
+    const ref       = `DOS-${year}-${String(yearCount + 1).padStart(5, '0')}`
 
     // Mettre à jour commune + adresse sur le patient
     await prisma.patient.update({
