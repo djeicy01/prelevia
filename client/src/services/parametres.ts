@@ -29,3 +29,8 @@ export const createPanel       = (d: any)                 => api.post('/panels',
 export const updatePanel       = (id: string, d: any)     => api.patch(`/panels/${id}`, d).then(r => r.data)
 export const updatePanelExamens= (id: string, ids: string[]) =>
   api.put(`/panels/${id}/examens`, { catalogueIds: ids }).then(r => r.data)
+
+// ── Assurances ───────────────────────────────────────────────
+export const getAssurances    = ()                    => api.get('/assurances').then(r => r.data)
+export const createAssurance  = (d: any)              => api.post('/assurances', d).then(r => r.data)
+export const updateAssurance  = (id: string, d: any)  => api.patch(`/assurances/${id}`, d).then(r => r.data)
