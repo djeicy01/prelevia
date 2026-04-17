@@ -22,4 +22,7 @@ export const dossiersService = {
 
   removeExamen: (id: string, examenId: string) =>
     api.delete(`/dossiers/${id}/examens/${examenId}`).then(r => r.data),
+
+  annuler: (id: string) =>
+    api.patch<Dossier>(`/dossiers/${id}/annuler`).then(r => r.data),
 }

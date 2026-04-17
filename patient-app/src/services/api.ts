@@ -49,6 +49,9 @@ export const dossiersApi = {
     creneauDate?: string
     creneauHeure?: string
   }) => api.post('/patient/dossiers', data).then(r => r.data),
+
+  annulerDossier: (id: string) =>
+    api.patch(`/patient/dossiers/${id}/annuler`).then(r => r.data),
 }
 
 // ─── OCR ───────────────────────────────────────────────────────

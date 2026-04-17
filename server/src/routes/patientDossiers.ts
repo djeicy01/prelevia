@@ -73,8 +73,10 @@ router.post('/', authPatient, async (req: PatientRequest, res: Response) => {
       ...(assuranceNonPartenaireNom ? { assuranceNonPartenaireNom }                      : {}),
     }
 
-    // Référence unique
-    const ref = `DOS-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    // Générer la référence DOS-YYYY-NNNNN (auto-incrémenté par année)
+    const year      = new Date().getFullYear()
+    const yearCount = await prisma.dossier.count({ where: { ref: { startsWith: `DOS-${year}-` } } })
+    const ref       = `DOS-${year}-${String(yearCount + 1).padStart(5, '0')}`
 
     // Mettre à jour commune + adresse sur le patient
     await prisma.patient.update({
@@ -178,6 +180,29 @@ router.get('/:id', authPatient, async (req: PatientRequest, res: Response) => {
   } catch (err) {
     console.error('[GET /patient/dossiers/:id]', err)
     return res.status(500).json({ error: 'Erreur lors de la récupération du dossier' })
+  }
+})
+
+// ─── PATCH /api/patient/dossiers/:id/annuler ─────────────────────────────────
+// Patient peut annuler uniquement si statut EN_ATTENTE
+router.patch('/:id/annuler', authPatient, async (req: PatientRequest, res: Response) => {
+  try {
+    const patientId = req.patient!.patientId
+    const dossier   = await prisma.dossier.findFirst({
+      where: { id: req.params.id, patientId },
+    })
+    if (!dossier) return res.status(404).json({ error: 'Dossier non trouvé' })
+    if (dossier.statut !== 'EN_ATTENTE') {
+      return res.status(403).json({ error: 'Annulation impossible : le dossier est déjà en traitement' })
+    }
+    const updated = await prisma.dossier.update({
+      where: { id: dossier.id },
+      data:  { statut: 'ANNULE' },
+    })
+    return res.json(updated)
+  } catch (err) {
+    console.error('[PATCH /patient/dossiers/:id/annuler]', err)
+    return res.status(500).json({ error: 'Erreur lors de l\'annulation' })
   }
 })
 

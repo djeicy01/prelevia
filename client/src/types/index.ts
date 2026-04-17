@@ -2,7 +2,7 @@
 
 export type Role            = 'SUPER_ADMIN' | 'ADMIN' | 'COORDINATEUR'
 export type AgentStatut     = 'ACTIF' | 'INACTIF' | 'SUSPENDU' | 'EN_FORMATION'
-export type DossierStatut   = 'EN_ATTENTE' | 'PRET_PRELEVEMENT' | 'PRELEVEMENT_FAIT' | 'PAYE' | 'ARCHIVE'
+export type DossierStatut   = 'EN_ATTENTE' | 'PRET_PRELEVEMENT' | 'PRELEVEMENT_FAIT' | 'PAYE' | 'RESULTATS_EN_COURS' | 'RESULTATS_DISPONIBLES' | 'ARCHIVE' | 'ANNULE'
 export type OcrSource       = 'AUTO' | 'PATIENT' | 'AGENT' | 'MANUAL'
 export type AssuranceStatut = 'DOCS_COLLECTES' | 'SOUMIS_LABO' | 'EN_VALIDATION' | 'VALIDE_TOTAL' | 'VALIDE_PARTIEL' | 'REFUSE'
 export type MissionStatut   = 'PLANIFIEE' | 'EN_ROUTE' | 'ARRIVEE' | 'PRELEVEMENT_FAIT' | 'TERMINEE'

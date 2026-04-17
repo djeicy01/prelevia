@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { dossiersService } from '../services/dossiers'
 import { agentsService } from '../services/agents'
+import { useAuthStore } from '../store/authStore'
 import api from '../services/api'
 import type { Dossier, Agent, DossierStatut, AssuranceStatut } from '../types'
 
@@ -23,6 +24,7 @@ const STATUT_DOSSIER: Record<DossierStatut, { label: string; bg: string; color: 
   RESULTATS_EN_COURS:    { label: 'Résultats en cours',   bg: '#FEF9C3', color: '#713F12' },
   RESULTATS_DISPONIBLES: { label: 'Résultats disponibles',bg: '#D1FAE5', color: '#065F46' },
   ARCHIVE:               { label: 'Archivé',              bg: '#F3F4F6', color: '#6B7280' },
+  ANNULE:                { label: 'Annulé',               bg: '#FEE2E2', color: '#991B1B' },
 }
 
 const STATUT_ASSURANCE: Record<string, { label: string; bg: string; color: string }> = {
@@ -167,9 +169,12 @@ function ModalAssignerAgent({
 export default function PatientDetail() {
   const { id }    = useParams<{ id: string }>()
   const navigate  = useNavigate()
+  const currentUser = useAuthStore(s => s.user)
   const [dossier, setDossier] = useState<Dossier | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showAssign, setShowAssign] = useState(false)
+  const [showAssign, setShowAssign]   = useState(false)
+  const [showCancel, setShowCancel]   = useState(false)
+  const [cancelling, setCancelling]   = useState(false)
   const [toast, setToast]     = useState<string | null>(null)
   // id → nom pour résoudre assuranceId dans noteAdmin
   const [assurancesMap, setAssurancesMap] = useState<Record<string, string>>({})
@@ -326,6 +331,48 @@ export default function PatientDetail() {
         />
       )}
 
+      {/* Modal confirmation annulation */}
+      {showCancel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,.45)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowCancel(false) }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6"
+            style={{ border: `1px solid ${BD}` }}>
+            <h2 className="font-bold text-base mb-2" style={{ color: TX }}>Annuler le dossier ?</h2>
+            <p className="text-sm mb-5" style={{ color: TL }}>
+              Cette action est irréversible. Le dossier <span className="font-semibold" style={{ color: TX }}>{dossier.ref}</span> sera marqué comme annulé.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowCancel(false)}
+                className="text-sm font-semibold px-4 py-2 rounded-lg border"
+                style={{ borderColor: BD, color: TL }}>
+                Annuler
+              </button>
+              <button
+                disabled={cancelling}
+                onClick={async () => {
+                  setCancelling(true)
+                  try {
+                    await dossiersService.annuler(dossier.id)
+                    setShowCancel(false)
+                    load()
+                    showMsg('Dossier annulé')
+                  } catch (err: any) {
+                    showMsg(err.response?.data?.error ?? 'Erreur lors de l\'annulation')
+                    setShowCancel(false)
+                  } finally {
+                    setCancelling(false)
+                  }
+                }}
+                className="text-sm font-semibold px-4 py-2 rounded-lg text-white disabled:opacity-60"
+                style={{ background: '#E05C5C' }}>
+                {cancelling ? 'Annulation…' : 'Confirmer l\'annulation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white border-b flex items-center justify-between px-7 h-[58px]"
         style={{ borderColor: BD }}>
@@ -360,6 +407,18 @@ export default function PatientDetail() {
               className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
               style={{ background: AC }}>
               Assigner un agent
+            </button>
+          )}
+          {/* Bouton annulation : SUPER_ADMIN sur tout statut, ADMIN uniquement EN_ATTENTE */}
+          {dossier.statut !== 'ANNULE' && dossier.statut !== 'ARCHIVE' && (
+            (currentUser?.role === 'SUPER_ADMIN' ||
+             (currentUser?.role !== 'SUPER_ADMIN' && dossier.statut === 'EN_ATTENTE'))
+          ) && (
+            <button
+              onClick={() => setShowCancel(true)}
+              className="text-sm font-semibold px-4 py-2 rounded-lg border"
+              style={{ borderColor: '#E05C5C', color: '#E05C5C' }}>
+              Annuler le dossier
             </button>
           )}
         </div>
@@ -459,14 +518,9 @@ export default function PatientDetail() {
                 </thead>
                 <tbody>
                   {examens.map((e, i) => {
-                    // La part patient n'est calculable qu'après validation assurance
-                    const assuranceValidee =
-                      dossier.statutAssurance === 'VALIDE_TOTAL' ||
-                      dossier.statutAssurance === 'VALIDE_PARTIEL'
-                    const couvert = e.couvert === true
-                    const partPat = couvert ? Math.round(e.tarif * 0.2) : e.tarif
-                    // Afficher la part seulement si assurance validée et couverture connue
-                    const showPartPat = assuranceValidee && e.couvert !== null && e.couvert !== undefined
+                    const taux = patient?.assurance?.tauxCouverture ?? 80
+                    const couvertureXOF = e.couvert === true ? Math.round(e.tarif * taux / 100) : 0
+                    const partPatXOF = e.tarif - couvertureXOF
                     return (
                       <tr key={e.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
                         <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: P }}>
@@ -476,22 +530,25 @@ export default function PatientDetail() {
                           {e.catalogue?.nom ?? '—'}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-xs">
-                          {e.tarif.toLocaleString()}
+                          {e.tarif.toLocaleString()} XOF
                         </td>
                         {dossier.statutAssurance && (
-                          <td className="px-3 py-2.5">
+                          <td className="px-3 py-2.5 text-right font-mono text-xs">
                             {e.couvert === null || e.couvert === undefined ? (
                               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
-                            ) : couvert ? (
-                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#D1FAE5', color: '#065F46' }}>Couvert 80%</span>
+                            ) : e.couvert ? (
+                              <span style={{ color: '#065F46' }}>{couvertureXOF.toLocaleString()} XOF</span>
                             ) : (
-                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
+                              <span style={{ color: TL }}>0 XOF</span>
                             )}
                           </td>
                         )}
                         {dossier.statutAssurance && (
-                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: showPartPat ? TX : TL }}>
-                            {showPartPat ? partPat.toLocaleString() : '—'}
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: TX }}>
+                            {e.couvert === null || e.couvert === undefined
+                              ? <span style={{ color: TL }}>{e.tarif.toLocaleString()} XOF</span>
+                              : `${partPatXOF.toLocaleString()} XOF`
+                            }
                           </td>
                         )}
                       </tr>

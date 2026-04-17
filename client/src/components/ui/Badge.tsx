@@ -65,6 +65,7 @@ export function BadgeDossier({ statut = 'INCONNU' }: { statut?: DossierStatut | 
     RESULTATS_DISPONIBLES: ['success', 'Résultats dispo'],
     PAYE:                  ['success', 'Payé'],
     ARCHIVE:               ['neutral', 'Archivé'],
+    ANNULE:                ['danger',  'Annulé'],
   }
   const entry = MAP[statut]
   if (!entry) return <Badge variant="neutral">{statut}</Badge>

@@ -163,10 +163,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Patient introuvable' })
     }
 
-    // Générer la référence DOS-YYYY-NNNNN
-    const count = await prisma.dossier.count()
-    const year  = new Date().getFullYear()
-    const ref   = `DOS-${year}-${String(count + 1).padStart(5, '0')}`
+    // Générer la référence DOS-YYYY-NNNNN (auto-incrémenté par année)
+    const year      = new Date().getFullYear()
+    const yearCount = await prisma.dossier.count({ where: { ref: { startsWith: `DOS-${year}-` } } })
+    const ref       = `DOS-${year}-${String(yearCount + 1).padStart(5, '0')}`
 
     // Récupérer les tarifs des examens demandés
     let examensData: { catalogueId: string; tarif: number }[] = []
@@ -651,6 +651,30 @@ router.post('/:id/resultats', async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Erreur serveur' })
+  }
+})
+
+// ─── PATCH /api/dossiers/:id/annuler ─────────────────────────────────────────
+// SUPER_ADMIN : peut annuler à tout stade
+// ADMIN / autres : seulement si EN_ATTENTE
+router.patch('/:id/annuler', async (req: AuthRequest, res: Response) => {
+  try {
+    const dossier = await prisma.dossier.findUnique({ where: { id: req.params.id } })
+    if (!dossier) return res.status(404).json({ error: 'Dossier non trouvé' })
+
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN'
+    if (!isSuperAdmin && dossier.statut !== 'EN_ATTENTE') {
+      return res.status(403).json({ error: 'Annulation impossible : seul un Super Admin peut annuler un dossier en cours de traitement' })
+    }
+
+    const updated = await prisma.dossier.update({
+      where: { id: dossier.id },
+      data:  { statut: 'ANNULE' },
+    })
+    return res.json(updated)
+  } catch (err) {
+    console.error('[PATCH /dossiers/:id/annuler]', err)
+    return res.status(500).json({ error: 'Erreur lors de l\'annulation' })
   }
 })
 
