@@ -459,14 +459,9 @@ export default function PatientDetail() {
                 </thead>
                 <tbody>
                   {examens.map((e, i) => {
-                    // La part patient n'est calculable qu'après validation assurance
-                    const assuranceValidee =
-                      dossier.statutAssurance === 'VALIDE_TOTAL' ||
-                      dossier.statutAssurance === 'VALIDE_PARTIEL'
-                    const couvert = e.couvert === true
-                    const partPat = couvert ? Math.round(e.tarif * 0.2) : e.tarif
-                    // Afficher la part seulement si assurance validée et couverture connue
-                    const showPartPat = assuranceValidee && e.couvert !== null && e.couvert !== undefined
+                    const taux = patient?.assurance?.tauxCouverture ?? 80
+                    const couvertureXOF = e.couvert === true ? Math.round(e.tarif * taux / 100) : 0
+                    const partPatXOF = e.tarif - couvertureXOF
                     return (
                       <tr key={e.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
                         <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: P }}>
@@ -476,22 +471,25 @@ export default function PatientDetail() {
                           {e.catalogue?.nom ?? '—'}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-xs">
-                          {e.tarif.toLocaleString()}
+                          {e.tarif.toLocaleString()} XOF
                         </td>
                         {dossier.statutAssurance && (
-                          <td className="px-3 py-2.5">
+                          <td className="px-3 py-2.5 text-right font-mono text-xs">
                             {e.couvert === null || e.couvert === undefined ? (
                               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
-                            ) : couvert ? (
-                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#D1FAE5', color: '#065F46' }}>Couvert 80%</span>
+                            ) : e.couvert ? (
+                              <span style={{ color: '#065F46' }}>{couvertureXOF.toLocaleString()} XOF</span>
                             ) : (
-                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
+                              <span style={{ color: TL }}>0 XOF</span>
                             )}
                           </td>
                         )}
                         {dossier.statutAssurance && (
-                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: showPartPat ? TX : TL }}>
-                            {showPartPat ? partPat.toLocaleString() : '—'}
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: TX }}>
+                            {e.couvert === null || e.couvert === undefined
+                              ? <span style={{ color: TL }}>{e.tarif.toLocaleString()} XOF</span>
+                              : `${partPatXOF.toLocaleString()} XOF`
+                            }
                           </td>
                         )}
                       </tr>
