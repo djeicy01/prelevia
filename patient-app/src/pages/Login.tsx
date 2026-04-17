@@ -20,9 +20,9 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await authApi.sendOtp(telephone)
+      const res = await authApi.sendOtp(telephone)
       toast('Code envoyé par SMS !', 'success')
-      navigate('/otp', { state: { telephone } })
+      navigate('/otp', { state: { telephone, devOtp: res?.otp ?? null } })
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Erreur'
       toast(msg, 'error')

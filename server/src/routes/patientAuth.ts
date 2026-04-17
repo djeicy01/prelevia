@@ -19,11 +19,17 @@ async function envoyerSMSOTP(telephone: string, otp: string): Promise<void> {
     return
   }
   const twilio = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-  await twilio.messages.create({
-    body: `Prelevia — Votre code de vérification : ${otp}. Valide 10 minutes. Ne le partagez pas.`,
-    from: TWILIO_PHONE_NUMBER,
-    to:   telephone,
-  })
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Twilio timeout après 10s')), 10_000)
+  )
+  await Promise.race([
+    twilio.messages.create({
+      body: `Prelevia — Votre code de vérification : ${otp}. Valide 10 minutes. Ne le partagez pas.`,
+      from: TWILIO_PHONE_NUMBER,
+      to:   telephone,
+    }),
+    timeout,
+  ])
 }
 
 // ─── POST /api/patient/register ──────────────────────────────
@@ -85,7 +91,11 @@ router.post('/otp/send', async (req: Request, res: Response) => {
 
     await envoyerSMSOTP(telephone, otp)
 
-    res.json({ message: 'Code OTP envoyé par SMS' })
+    const isDev = process.env.NODE_ENV !== 'production'
+    res.json({
+      message: 'Code OTP envoyé par SMS',
+      ...(isDev ? { otp } : {}),
+    })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Erreur serveur' })
