@@ -6,6 +6,7 @@ import {
   getZones,
   getCatalogue, createExamen, updateExamen,
   getPanels, createPanel, updatePanel, updatePanelExamens,
+  getAssurances, createAssurance, updateAssurance,
 } from '../services/parametres'
 import { usersService, type UserRecord } from '../services/users'
 import { useAuthStore } from '../store/authStore'
@@ -600,6 +601,144 @@ function TabPanels({ panels, catalogue, onRefresh }: { panels: Panel[]; catalogu
 }
 
 // ─────────────────────────────────────────────────────────────
+// TAB: ASSURANCES PARTENAIRES
+// ─────────────────────────────────────────────────────────────
+interface AssuranceItem {
+  id: string; nom: string; type: string; tauxCouverture: number
+  delaiValidation: string; contactEmail?: string; contactTel?: string; actif: boolean
+}
+const EMPTY_ASS = { nom: '', type: '', tauxCouverture: '', delaiValidation: '', contactEmail: '', contactTel: '' }
+
+function TabAssurances() {
+  const [assurances, setAssurances] = useState<AssuranceItem[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [modal, setModal]           = useState<'add' | AssuranceItem | null>(null)
+  const [form, setForm]             = useState({ ...EMPTY_ASS })
+  const [saving, setSaving]         = useState(false)
+  const [toast, setToast]           = useState<{ msg: string; ok: boolean } | null>(null)
+
+  function showToast(msg: string, ok = true) {
+    setToast({ msg, ok })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  async function load() {
+    setLoading(true)
+    try { setAssurances(await getAssurances()) }
+    catch { showToast('Erreur chargement', false) }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { load() }, [])
+
+  function openAdd() { setForm({ ...EMPTY_ASS }); setModal('add') }
+  function openEdit(a: AssuranceItem) {
+    setForm({
+      nom: a.nom, type: a.type, tauxCouverture: String(a.tauxCouverture),
+      delaiValidation: a.delaiValidation, contactEmail: a.contactEmail ?? '', contactTel: a.contactTel ?? '',
+    })
+    setModal(a)
+  }
+
+  async function save() {
+    setSaving(true)
+    try {
+      const payload = { ...form, tauxCouverture: Number(form.tauxCouverture) }
+      if (modal === 'add') await createAssurance(payload)
+      else                 await updateAssurance((modal as AssuranceItem).id, payload)
+      showToast(modal === 'add' ? 'Assurance ajoutée' : 'Assurance mise à jour')
+      setModal(null); load()
+    } catch (err: any) {
+      showToast(err.response?.data?.error ?? 'Erreur', false)
+    } finally { setSaving(false) }
+  }
+
+  async function toggleActif(a: AssuranceItem) {
+    try { await updateAssurance(a.id, { actif: !a.actif }); load() }
+    catch { showToast('Erreur', false) }
+  }
+
+  return (
+    <div>
+      {toast && <Toast {...toast} />}
+
+      {modal && (
+        <Modal title={modal === 'add' ? 'Nouvelle assurance' : `Modifier — ${(modal as AssuranceItem).nom}`} onClose={() => setModal(null)}>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nom *"><Input value={form.nom} onChange={(v: string) => setForm(f => ({ ...f, nom: v }))} placeholder="MUGEFCI" /></Field>
+            <Field label="Type *"><Input value={form.type} onChange={(v: string) => setForm(f => ({ ...f, type: v }))} placeholder="Mutuelle" /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Taux de couverture (%) *">
+              <Input type="number" value={form.tauxCouverture} onChange={(v: string) => setForm(f => ({ ...f, tauxCouverture: v }))} placeholder="80" />
+            </Field>
+            <Field label="Délai de validation *"><Input value={form.delaiValidation} onChange={(v: string) => setForm(f => ({ ...f, delaiValidation: v }))} placeholder="48h" /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="E-mail contact"><Input type="email" value={form.contactEmail} onChange={(v: string) => setForm(f => ({ ...f, contactEmail: v }))} /></Field>
+            <Field label="Téléphone contact"><Input value={form.contactTel} onChange={(v: string) => setForm(f => ({ ...f, contactTel: v }))} /></Field>
+          </div>
+          {form.tauxCouverture && (
+            <p className="text-xs" style={{ color: TL }}>
+              Part patient pour un examen à 10 000 XOF : {(10000 - Math.round(10000 * Number(form.tauxCouverture) / 100)).toLocaleString('fr-FR')} XOF
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Btn variant="ghost" onClick={() => setModal(null)}>Annuler</Btn>
+            <Btn onClick={save} disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Btn>
+          </div>
+        </Modal>
+      )}
+
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm" style={{ color: TL }}>{assurances.length} assurance(s) partenaire(s)</p>
+        <Btn onClick={openAdd}>+ Ajouter</Btn>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-sm" style={{ color: TL }}>Chargement…</div>
+      ) : (
+        <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: BD }}>
+          <table className="w-full text-sm">
+            <thead style={{ background: BG }}>
+              <tr>
+                {['Assurance', 'Type', 'Taux couverture', 'Délai valid.', 'Contact', 'Statut', ''].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: TL }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {assurances.map((a, i) => (
+                <tr key={a.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
+                  <td className="px-4 py-3 font-semibold" style={{ color: TX }}>{a.nom}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: TL }}>{a.type}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-bold font-mono text-sm" style={{ color: P }}>{a.tauxCouverture}%</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs" style={{ color: TL }}>{a.delaiValidation}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: TL }}>
+                    {a.contactEmail || a.contactTel || '—'}
+                  </td>
+                  <td className="px-4 py-3"><Badge actif={a.actif} /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <Btn small variant="ghost" onClick={() => toggleActif(a)}>{a.actif ? 'Désactiver' : 'Activer'}</Btn>
+                      <Btn small onClick={() => openEdit(a)}>Modifier</Btn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {assurances.length === 0 && (
+            <div className="text-center py-12 text-sm" style={{ color: TL }}>Aucune assurance partenaire</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
 // TAB: UTILISATEURS (SUPER_ADMIN uniquement)
 // ─────────────────────────────────────────────────────────────
 const ROLES = ['ADMIN', 'COORDINATEUR', 'COMPTABLE']
@@ -805,13 +944,14 @@ function TabUtilisateurs() {
 // ─────────────────────────────────────────────────────────────
 // PAGE PRINCIPALE
 // ─────────────────────────────────────────────────────────────
-type Tab = 'general' | 'sms' | 'catalogue' | 'panels' | 'utilisateurs'
+type Tab = 'general' | 'sms' | 'catalogue' | 'panels' | 'assurances' | 'utilisateurs'
 
 const TABS: { id: Tab; label: string; superAdminOnly?: boolean }[] = [
   { id: 'general',      label: 'Général' },
   { id: 'sms',          label: 'Templates SMS' },
   { id: 'catalogue',    label: 'Catalogue examens' },
   { id: 'panels',       label: 'Panels d\'analyses' },
+  { id: 'assurances',   label: 'Assurances' },
   { id: 'utilisateurs', label: 'Utilisateurs', superAdminOnly: true },
 ]
 
@@ -879,6 +1019,7 @@ export default function Parametres() {
           {tab === 'sms'           && <TabSMS templates={templates} onRefresh={() => getTemplatesSMS().then(setTpl)} />}
           {tab === 'catalogue'     && <TabCatalogue catalogue={catalogue} onRefresh={() => getCatalogue().then(setCatalogue)} />}
           {tab === 'panels'        && <TabPanels panels={panels} catalogue={catalogue} onRefresh={() => getPanels().then(setPanels)} />}
+          {tab === 'assurances'    && <TabAssurances />}
           {tab === 'utilisateurs'  && isSuperAdmin && <TabUtilisateurs />}
         </>
       )}

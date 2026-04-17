@@ -20,6 +20,7 @@ export interface Assurance {
   delaiValidation: string
   contactEmail?:   string
   contactTel?:     string
+  actif?:          boolean
 }
 
 export interface Patient {

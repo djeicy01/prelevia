@@ -201,6 +201,7 @@ model Assurance {
   delaiValidation String
   contactEmail    String?
   contactTel      String?
+  actif           Boolean   @default(true)
   patients        Patient[]
 }
 
