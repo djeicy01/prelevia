@@ -510,7 +510,7 @@ export default function PatientDetail() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ background: BG }}>
-                    {['Code', 'Examen', 'Tarif', ...(dossier.statutAssurance ? ['Couverture', 'Part patient'] : [])].map(h => (
+                    {['Code', 'Examen', 'Tarif', ...(hasAssurance ? ['Couverture', 'Part patient'] : [])].map(h => (
                       <th key={h} className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide"
                         style={{ color: TL }}>{h}</th>
                     ))}
@@ -518,9 +518,9 @@ export default function PatientDetail() {
                 </thead>
                 <tbody>
                   {examens.map((e, i) => {
-                    const taux = patient?.assurance?.tauxCouverture ?? 80
-                    const couvertureXOF = e.couvert === true ? Math.round(e.tarif * taux / 100) : 0
-                    const partPatXOF = e.tarif - couvertureXOF
+                    const taux          = hasAssurance ? (patient?.assurance?.tauxCouverture ?? 0) : 0
+                    const couvertureXOF = taux > 0 ? Math.round(e.tarif * taux / 100) : 0
+                    const partPatXOF    = e.tarif - couvertureXOF
                     return (
                       <tr key={e.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
                         <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: P }}>
@@ -530,25 +530,16 @@ export default function PatientDetail() {
                           {e.catalogue?.nom ?? '—'}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-xs">
-                          {e.tarif.toLocaleString()} XOF
+                          {e.tarif.toLocaleString('fr-FR')} XOF
                         </td>
-                        {dossier.statutAssurance && (
-                          <td className="px-3 py-2.5 text-right font-mono text-xs">
-                            {e.couvert === null || e.couvert === undefined ? (
-                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
-                            ) : e.couvert ? (
-                              <span style={{ color: '#065F46' }}>{couvertureXOF.toLocaleString()} XOF</span>
-                            ) : (
-                              <span style={{ color: TL }}>0 XOF</span>
-                            )}
+                        {hasAssurance && (
+                          <td className="px-3 py-2.5 text-right font-mono text-xs" style={{ color: '#065F46' }}>
+                            {couvertureXOF.toLocaleString('fr-FR')} XOF
                           </td>
                         )}
-                        {dossier.statutAssurance && (
+                        {hasAssurance && (
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: TX }}>
-                            {e.couvert === null || e.couvert === undefined
-                              ? <span style={{ color: TL }}>{e.tarif.toLocaleString()} XOF</span>
-                              : `${partPatXOF.toLocaleString()} XOF`
-                            }
+                            {partPatXOF.toLocaleString('fr-FR')} XOF
                           </td>
                         )}
                       </tr>
