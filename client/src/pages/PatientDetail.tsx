@@ -246,6 +246,14 @@ export default function PatientDetail() {
   const resolvedAssuranceNom = noteAdminData.assuranceId
     ? assurancesMap[noteAdminData.assuranceId as string] ?? null
     : null
+
+  // Fallback : noteAdmin est une chaîne brute (non-JSON) — contient directement le nom
+  const noteAdminRawString = (() => {
+    if (!dossier.noteAdmin) return null
+    try { JSON.parse(dossier.noteAdmin); return null }
+    catch { return dossier.noteAdmin }
+  })()
+
   const hasAssurance =
     !!patient?.assurance ||
     !!resolvedAssuranceNom ||
@@ -381,9 +389,15 @@ export default function PatientDetail() {
             <Row label="Assurance"  value={
               patient?.assurance
                 ? <span className="font-semibold" style={{ color: P }}>{patient.assurance.nom}</span>
-                : <span style={{ color: TL }}>Aucune</span>
+                : resolvedAssuranceNom
+                  ? <span className="font-semibold" style={{ color: P }}>{resolvedAssuranceNom}</span>
+                  : (noteAdminData.assuranceNonPartenaireNom as string | undefined)
+                    ? <span className="font-semibold" style={{ color: P }}>{noteAdminData.assuranceNonPartenaireNom as string}</span>
+                    : noteAdminRawString
+                      ? <span className="font-semibold" style={{ color: P }}>{noteAdminRawString}</span>
+                      : <span style={{ color: TL }}>Aucune</span>
             } />
-            {patient?.assurance && (
+            {(patient?.assurance) && (
               <Row label="Taux couverture" value={`${patient.assurance.tauxCouverture}%`} />
             )}
           </Card>
