@@ -9,7 +9,8 @@ import { ChevronLeft, MessageSquare, RotateCcw } from 'lucide-react'
 export default function OTP() {
   const navigate  = useNavigate()
   const location  = useLocation()
-  const telephone = (location.state as { telephone?: string })?.telephone ?? ''
+  const telephone = (location.state as { telephone?: string; devOtp?: string })?.telephone ?? ''
+  const devOtp    = (location.state as { devOtp?: string })?.devOtp ?? null
   const setAuth   = useAuthStore(s => s.setAuth)
 
   const [digits, setDigits]     = useState<string[]>(Array(6).fill(''))
@@ -93,6 +94,13 @@ export default function OTP() {
       </div>
 
       <div className="flex-1 px-5 pt-10 flex flex-col items-center gap-8">
+        {/* Hint dev — OTP visible seulement hors production */}
+        {devOtp && (
+          <div className="w-full bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-center">
+            <p className="text-xs text-amber-700 font-medium">Mode dev — Code OTP :</p>
+            <p className="text-2xl font-extrabold tracking-widest text-amber-800 mt-1">{devOtp}</p>
+          </div>
+        )}
         {/* OTP inputs */}
         <div className="flex gap-3" onPaste={handlePaste}>
           {digits.map((d, i) => (
