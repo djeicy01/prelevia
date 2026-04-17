@@ -518,9 +518,9 @@ export default function PatientDetail() {
                 </thead>
                 <tbody>
                   {examens.map((e, i) => {
-                    const taux         = patient?.assurance?.tauxCouverture ?? 80
-                    const couvertureXOF = Math.round(e.tarif * taux / 100)
-                    const partPatXOF   = e.tarif - couvertureXOF
+                    const taux          = hasAssurance ? (patient?.assurance?.tauxCouverture ?? 0) : 0
+                    const couvertureXOF = taux > 0 ? Math.round(e.tarif * taux / 100) : 0
+                    const partPatXOF    = e.tarif - couvertureXOF
                     return (
                       <tr key={e.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
                         <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: P }}>
@@ -530,16 +530,16 @@ export default function PatientDetail() {
                           {e.catalogue?.nom ?? '—'}
                         </td>
                         <td className="px-3 py-2.5 text-right font-mono text-xs">
-                          {e.tarif.toLocaleString()} XOF
+                          {e.tarif.toLocaleString('fr-FR')} XOF
                         </td>
                         {hasAssurance && (
                           <td className="px-3 py-2.5 text-right font-mono text-xs" style={{ color: '#065F46' }}>
-                            {couvertureXOF.toLocaleString()} XOF
+                            {couvertureXOF.toLocaleString('fr-FR')} XOF
                           </td>
                         )}
                         {hasAssurance && (
                           <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: TX }}>
-                            {partPatXOF.toLocaleString()} XOF
+                            {partPatXOF.toLocaleString('fr-FR')} XOF
                           </td>
                         )}
                       </tr>
