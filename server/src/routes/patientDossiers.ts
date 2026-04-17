@@ -183,4 +183,27 @@ router.get('/:id', authPatient, async (req: PatientRequest, res: Response) => {
   }
 })
 
+// ─── PATCH /api/patient/dossiers/:id/annuler ─────────────────────────────────
+// Patient peut annuler uniquement si statut EN_ATTENTE
+router.patch('/:id/annuler', authPatient, async (req: PatientRequest, res: Response) => {
+  try {
+    const patientId = req.patient!.patientId
+    const dossier   = await prisma.dossier.findFirst({
+      where: { id: req.params.id, patientId },
+    })
+    if (!dossier) return res.status(404).json({ error: 'Dossier non trouvé' })
+    if (dossier.statut !== 'EN_ATTENTE') {
+      return res.status(403).json({ error: 'Annulation impossible : le dossier est déjà en traitement' })
+    }
+    const updated = await prisma.dossier.update({
+      where: { id: dossier.id },
+      data:  { statut: 'ANNULE' },
+    })
+    return res.json(updated)
+  } catch (err) {
+    console.error('[PATCH /patient/dossiers/:id/annuler]', err)
+    return res.status(500).json({ error: 'Erreur lors de l\'annulation' })
+  }
+})
+
 export default router

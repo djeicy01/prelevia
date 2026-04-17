@@ -28,7 +28,10 @@ export type DossierStatut =
   | 'PRET_PRELEVEMENT'
   | 'PRELEVEMENT_FAIT'
   | 'PAYE'
+  | 'RESULTATS_EN_COURS'
+  | 'RESULTATS_DISPONIBLES'
   | 'ARCHIVE'
+  | 'ANNULE'
 
 export type AssuranceStatut =
   | 'DOCS_COLLECTES'

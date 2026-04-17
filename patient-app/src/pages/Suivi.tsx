@@ -48,9 +48,11 @@ export default function Suivi() {
   const { id }  = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const [dossier, setDossier] = useState<Dossier | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [eta, setEta]         = useState(18) // minutes
+  const [dossier, setDossier]       = useState<Dossier | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [eta, setEta]               = useState(18) // minutes
+  const [showCancel, setShowCancel] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -188,6 +190,17 @@ export default function Suivi() {
           ))}
         </div>
 
+        {/* CTA Annulation — visible uniquement si EN_ATTENTE */}
+        {dossier.statut === 'EN_ATTENTE' && (
+          <button
+            onClick={() => setShowCancel(true)}
+            className="w-full py-3 rounded-2xl text-sm font-semibold border-2 transition-colors"
+            style={{ borderColor: '#E05C5C', color: '#E05C5C', background: 'transparent' }}
+          >
+            Annuler ma demande
+          </button>
+        )}
+
         {/* CTA Paiement */}
         {dossier.statut === 'PRELEVEMENT_FAIT' && (
           <Button
@@ -217,6 +230,47 @@ export default function Suivi() {
           </Button>
         )}
       </div>
+
+      {/* Modale confirmation annulation */}
+      {showCancel && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5"
+          style={{ background: 'rgba(0,0,0,0.45)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowCancel(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="font-bold text-base text-[#1A2B26] mb-2">Annuler ma demande ?</h2>
+            <p className="text-sm text-[#5C7A74] mb-5">
+              Cette action est irréversible. Votre dossier sera annulé et vous serez redirigé vers l'accueil.
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                disabled={cancelling}
+                onClick={async () => {
+                  setCancelling(true)
+                  try {
+                    await dossiersApi.annulerDossier(dossier!.id)
+                    navigate('/home', { replace: true })
+                  } catch {
+                    setCancelling(false)
+                    setShowCancel(false)
+                  }
+                }}
+                className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+                style={{ background: '#E05C5C' }}
+              >
+                {cancelling ? 'Annulation…' : 'Confirmer l\'annulation'}
+              </button>
+              <button
+                onClick={() => setShowCancel(false)}
+                className="w-full py-3 rounded-xl text-sm font-semibold border border-[#D4E5E1] text-[#5C7A74]"
+              >
+                Retour
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }

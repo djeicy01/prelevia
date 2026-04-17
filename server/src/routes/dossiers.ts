@@ -654,4 +654,28 @@ router.post('/:id/resultats', async (req: AuthRequest, res: Response) => {
   }
 })
 
+// ─── PATCH /api/dossiers/:id/annuler ─────────────────────────────────────────
+// SUPER_ADMIN : peut annuler à tout stade
+// ADMIN / autres : seulement si EN_ATTENTE
+router.patch('/:id/annuler', async (req: AuthRequest, res: Response) => {
+  try {
+    const dossier = await prisma.dossier.findUnique({ where: { id: req.params.id } })
+    if (!dossier) return res.status(404).json({ error: 'Dossier non trouvé' })
+
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN'
+    if (!isSuperAdmin && dossier.statut !== 'EN_ATTENTE') {
+      return res.status(403).json({ error: 'Annulation impossible : seul un Super Admin peut annuler un dossier en cours de traitement' })
+    }
+
+    const updated = await prisma.dossier.update({
+      where: { id: dossier.id },
+      data:  { statut: 'ANNULE' },
+    })
+    return res.json(updated)
+  } catch (err) {
+    console.error('[PATCH /dossiers/:id/annuler]', err)
+    return res.status(500).json({ error: 'Erreur lors de l\'annulation' })
+  }
+})
+
 export default router

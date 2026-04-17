@@ -39,6 +39,7 @@ enum DossierStatut {
   RESULTATS_EN_COURS
   RESULTATS_DISPONIBLES
   ARCHIVE
+  ANNULE
 }
 
 enum OcrSource {
