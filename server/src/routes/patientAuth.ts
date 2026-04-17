@@ -35,6 +35,10 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'nom, prenom, telephone et commune sont obligatoires' })
     }
 
+    const nomN     = String(nom).toUpperCase().trim()
+    const prenomN  = String(prenom).toUpperCase().trim()
+    const communeN = String(commune).toUpperCase().trim()
+
     // Vérifier si le téléphone est déjà utilisé
     const existant = await prisma.patient.findFirst({ where: { telephone } })
     if (existant) {
@@ -47,7 +51,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const ref   = `PAT-${year}-${String(count + 1).padStart(5, '0')}`
 
     const patient = await prisma.patient.create({
-      data: { ref, nom, prenom, telephone, commune },
+      data: { ref, nom: nomN, prenom: prenomN, telephone, commune: communeN },
       select: { id: true, ref: true, nom: true, prenom: true, telephone: true, commune: true },
     })
 

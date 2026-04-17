@@ -20,6 +20,8 @@ enum Role {
   SUPER_ADMIN
   ADMIN
   COORDINATEUR
+  COMPTABLE
+  LABO
 }
 
 enum AgentStatut {

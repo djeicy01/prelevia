@@ -1,0 +1,3 @@
+-- AlterEnum: add COMPTABLE and LABO roles
+ALTER TYPE "Role" ADD VALUE 'COMPTABLE';
+ALTER TYPE "Role" ADD VALUE 'LABO';

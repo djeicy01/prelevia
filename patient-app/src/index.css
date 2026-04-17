@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #064D40;
+  --primary-light: #0A6E5C;
+  --primary-dark: #043830;
+  --accent: #F4A726;
+  --accent-light: #FFC94D;
+  --bg: #f0f5f4;
+  --text: #1A2B26;
+  --text-light: #5C7A74;
+  --border: #D4E5E1;
+  --danger: #E05C5C;
+  --success: #2CB67D;
+  --info: #3B82F6;
+}
+
+* {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  overscroll-behavior: none;
+}
+
+/* Safe area insets for PWA */
+.safe-top    { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Hide scrollbars */
+.no-scroll::-webkit-scrollbar { display: none; }
+.no-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Smooth transitions */
+.page-enter {
+  animation: slideUp 0.25s ease forwards;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* OCR scanning animation */
+.ocr-scan-line {
+  animation: scanLine 1.5s ease-in-out infinite;
+}
+@keyframes scanLine {
+  0%   { top: 0%; }
+  50%  { top: 95%; }
+  100% { top: 0%; }
+}
+
+/* Pulse for loading */
+@keyframes pulse-ring {
+  0%   { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+.pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}

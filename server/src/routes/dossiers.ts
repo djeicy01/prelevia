@@ -414,7 +414,7 @@ router.patch('/:id/statut', async (req: AuthRequest, res: Response) => {
 })
 
 // ─── GET /api/dossiers/:id/suivi ──────────────────────────────
-// Timeline 7 étapes pour l'app patient
+// Timeline 8 étapes pour l'app patient
 router.get('/:id/suivi', async (req: AuthRequest, res: Response) => {
   try {
     const dossier = await prisma.dossier.findUnique({
@@ -434,47 +434,64 @@ router.get('/:id/suivi', async (req: AuthRequest, res: Response) => {
     const idx   = (st: string) => ORDER.indexOf(st)
     const after = (st: string) => idx(s) >= idx(st)
 
+    // Ordre logique du parcours patient — 8 étapes
+    // Mapping statuts Prisma :
+    //   EN_ATTENTE / PRET_PRELEVEMENT → step 1 done, step 2 active
+    //   PRELEVEMENT_FAIT              → steps 1-3 done, step 4 active
+    //   PAYE                          → steps 1-4 done, step 5 active
+    //   RESULTATS_EN_COURS            → steps 1-6 done, step 7 active
+    //   RESULTATS_DISPONIBLES/ARCHIVE → toutes done
     const etapes = [
       {
         code:        'CREE',
-        label:       'Dossier créé',
+        label:       'RDV créé',
         description: 'Votre demande de prélèvement a été enregistrée.',
         statut:      'done',
         timestamp:   dossier.createdAt,
       },
       {
-        code:        'AGENT_ASSIGNE',
-        label:       'Agent assigné',
-        description: "Un agent de prélèvement vous a été attribué.",
-        statut:      m ? 'done' : (after('PRET_PRELEVEMENT') ? 'active' : 'pending'),
-        timestamp:   m?.createdAt ?? null,
-      },
-      {
         code:        'AGENT_EN_ROUTE',
         label:       'Agent en route',
-        description: "Votre agent est en chemin vers votre domicile.",
-        statut:      m && ['EN_ROUTE','ARRIVEE','PRELEVEMENT_FAIT','TERMINEE'].includes(m.statut)
-                       ? 'done'
-                       : (m ? 'active' : 'pending'),
+        description: "Votre agent de prélèvement est en chemin vers votre domicile.",
+        statut:      after('PRELEVEMENT_FAIT') ? 'done'
+                   : (m ? 'active' : 'pending'),
         timestamp:   null,
       },
       {
         code:        'PRELEVEMENT_EFFECTUE',
         label:       'Prélèvement effectué',
         description: "Les échantillons ont été prélevés à votre domicile.",
-        statut:      after('PRELEVEMENT_FAIT') ? 'done' : 'pending',
+        statut:      after('PRELEVEMENT_FAIT') ? 'done'
+                   : (after('PRET_PRELEVEMENT') && m ? 'active' : 'pending'),
         timestamp:   after('PRELEVEMENT_FAIT') ? dossier.updatedAt : null,
       },
       {
-        code:        'ECHANTILLONS_RECUS_LABO',
-        label:       'Échantillons reçus au laboratoire',
-        description: "Vos échantillons ont été acheminés et réceptionnés.",
-        statut:      after('PAYE') ? 'done' : 'pending',
+        code:        'PAIEMENT_CONFIRME',
+        label:       'Paiement confirmé',
+        description: "Le règlement de votre dossier a été encaissé par l'agent.",
+        statut:      after('PAYE') ? 'done'
+                   : (after('PRELEVEMENT_FAIT') ? 'active' : 'pending'),
+        timestamp:   null,
+      },
+      {
+        code:        'DOCS_LABO',
+        label:       'Documents envoyés au labo',
+        description: "Vos échantillons et documents ont été transmis au laboratoire.",
+        statut:      after('RESULTATS_EN_COURS') ? 'done'
+                   : (after('PAYE') ? 'active' : 'pending'),
+        timestamp:   null,
+      },
+      {
+        code:        'ASSURANCE_SOUMISE',
+        label:       'Assurance soumise',
+        description: "Votre dossier de remboursement a été soumis à votre assureur.",
+        statut:      after('RESULTATS_EN_COURS') ? 'done'
+                   : (after('PAYE') ? 'active' : 'pending'),
         timestamp:   null,
       },
       {
         code:        'ANALYSES_EN_COURS',
-        label:       'Analyses en cours',
+        label:       'Examens analysés',
         description: "Le laboratoire procède à l'analyse de vos échantillons.",
         statut:      s === 'RESULTATS_EN_COURS' ? 'active'
                    : after('RESULTATS_EN_COURS') ? 'done'

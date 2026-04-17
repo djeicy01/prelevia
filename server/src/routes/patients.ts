@@ -96,12 +96,17 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Champs obligatoires : nom, prenom, telephone, commune' })
     }
 
+    const nomN     = String(nom).toUpperCase().trim()
+    const prenomN  = String(prenom).toUpperCase().trim()
+    const communeN = String(commune).toUpperCase().trim()
+    const adresseN = adresse ? String(adresse).toUpperCase().trim() : undefined
+
     // Générer la référence PRV-XXX
     const count = await prisma.patient.count()
     const ref   = `PRV-${String(count + 1).padStart(3, '0')}`
 
     const patient = await prisma.patient.create({
-      data: { nom, prenom, telephone, commune, adresse, assuranceId, numCarte, ref },
+      data: { nom: nomN, prenom: prenomN, telephone, commune: communeN, adresse: adresseN, assuranceId, numCarte, ref },
       include: { assurance: true }
     })
 
@@ -121,7 +126,13 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
 
     const patient = await prisma.patient.update({
       where: { id: String(req.params.id) },
-      data:  { nom, prenom, telephone, commune, adresse, assuranceId, numCarte },
+      data:  {
+        ...(nom     !== undefined && { nom:     String(nom).toUpperCase().trim()     }),
+        ...(prenom  !== undefined && { prenom:  String(prenom).toUpperCase().trim()  }),
+        ...(commune !== undefined && { commune: String(commune).toUpperCase().trim() }),
+        ...(adresse !== undefined && { adresse: String(adresse).toUpperCase().trim() }),
+        telephone, assuranceId, numCarte,
+      },
       include: { assurance: true }
     })
 

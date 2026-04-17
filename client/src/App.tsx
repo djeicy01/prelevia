@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout         from './components/layout/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login      from './pages/Login'
@@ -13,6 +13,14 @@ import Rapports     from './pages/Rapports'
 import Parametres   from './pages/Parametres'
 import PatientDetail from './pages/PatientDetail'
 import MissionDetail from './pages/MissionDetail'
+import LaboLogin    from './pages/labo/LaboLogin'
+import LaboDossiers from './pages/labo/LaboDossiers'
+import { useLaboStore } from './store/laboStore'
+
+function LaboProtectedRoute({ children }: { children: React.ReactNode }) {
+  const token = useLaboStore(s => s.token)
+  return token ? <>{children}</> : <Navigate to="/labo/login" replace />
+}
 
 export default function App() {
   return (
@@ -35,6 +43,10 @@ export default function App() {
             <Route path="parametres" element={<Parametres />} />
           </Route>
         </Route>
+        {/* ─── Portail Laboratoire ─────────────── */}
+        <Route path="/labo/login"      element={<LaboLogin />} />
+        <Route path="/labo/dashboard"  element={<LaboProtectedRoute><LaboDossiers /></LaboProtectedRoute>} />
+        <Route path="/labo"            element={<Navigate to="/labo/login" replace />} />
       </Routes>
     </BrowserRouter>
   )

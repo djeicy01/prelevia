@@ -171,6 +171,20 @@ export default function PatientDetail() {
   const [loading, setLoading] = useState(true)
   const [showAssign, setShowAssign] = useState(false)
   const [toast, setToast]     = useState<string | null>(null)
+  // id → nom pour résoudre assuranceId dans noteAdmin
+  const [assurancesMap, setAssurancesMap] = useState<Record<string, string>>({})
+
+  // Charger la liste des assurances une fois pour la résolution noteAdmin
+  useEffect(() => {
+    api.get('/assurances')
+      .then(r => {
+        const list: Array<{ id: string; nom: string }> = r.data.assurances ?? r.data ?? []
+        const map: Record<string, string> = {}
+        list.forEach(a => { map[a.id] = a.nom })
+        setAssurancesMap(map)
+      })
+      .catch(() => {})
+  }, [])
 
   function load() {
     if (!id) return
@@ -220,6 +234,70 @@ export default function PatientDetail() {
   const assuranceStepIdx = dossier.statutAssurance
     ? ASSURANCE_STEPS.indexOf(dossier.statutAssurance as AssuranceStatut)
     : -1
+
+  // ── Parse noteAdmin une seule fois pour tout le composant ──────
+  const noteAdminData: Record<string, unknown> = (() => {
+    try { return dossier.noteAdmin ? JSON.parse(dossier.noteAdmin) : {} }
+    catch { return {} }
+  })()
+
+  // Assurance réellement liée : patient.assurance OU assuranceId résolu dans la map
+  // OU assureur non-partenaire déclaré dans noteAdmin
+  const resolvedAssuranceNom = noteAdminData.assuranceId
+    ? assurancesMap[noteAdminData.assuranceId as string] ?? null
+    : null
+  const hasAssurance =
+    !!patient?.assurance ||
+    !!resolvedAssuranceNom ||
+    !!(noteAdminData.assuranceNonPartenaireNom as string | undefined)
+
+  // ── Rendu note admin (utilise noteAdminData pré-parsé) ─────────
+  function renderNoteAdmin() {
+    if (!dossier.noteAdmin) return null
+
+    // Si JSON invalide → afficher tel quel
+    if (typeof noteAdminData !== 'object' || Array.isArray(noteAdminData)) {
+      return <p className="text-sm whitespace-pre-wrap" style={{ color: TX }}>{dossier.noteAdmin}</p>
+    }
+
+    const rows: { label: string; value: string }[] = []
+
+    if (noteAdminData.creneauDate) {
+      const dateStr = new Date(noteAdminData.creneauDate as string).toLocaleDateString('fr-FR', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      })
+      rows.push({ label: 'Créneau', value: `${dateStr}${noteAdminData.creneauHeure ? ` à ${noteAdminData.creneauHeure}` : ''}` })
+    }
+
+    // Assurance partenaire : affichée seulement si l'ID est résolu dans la map
+    if (resolvedAssuranceNom) {
+      rows.push({ label: 'Assurance', value: resolvedAssuranceNom })
+    }
+
+    if (noteAdminData.assuranceNonPartenaireNom) {
+      rows.push({ label: 'Assurance (non partenaire)', value: noteAdminData.assuranceNonPartenaireNom as string })
+    }
+
+    // Autres champs inconnus → liste clé/valeur
+    const knownKeys = new Set(['creneauDate', 'creneauHeure', 'assuranceId', 'assuranceNonPartenaireNom'])
+    for (const [key, val] of Object.entries(noteAdminData)) {
+      if (!knownKeys.has(key) && val !== null && val !== undefined && val !== '') {
+        rows.push({ label: key, value: String(val) })
+      }
+    }
+
+    if (rows.length === 0) return <p className="text-sm" style={{ color: TL }}>—</p>
+    return (
+      <div className="space-y-2">
+        {rows.map(r => (
+          <div key={r.label} className="flex items-start gap-3">
+            <span className="text-xs font-semibold shrink-0 w-36" style={{ color: TL }}>{r.label}</span>
+            <span className="text-sm" style={{ color: TX }}>{r.value}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col flex-1" style={{ background: BG }}>
@@ -314,16 +392,17 @@ export default function PatientDetail() {
           <Card title="Finances">
             <Row label="Total facturé"
               value={<span className="font-bold">{totalFacture.toLocaleString()} XOF</span>} />
-            {partAssurance > 0 && (
-              <Row label="Part assurance"
-                value={<span style={{ color: '#2CB67D' }}>−{partAssurance.toLocaleString()} XOF</span>} />
-            )}
-            <Row label="Part patient"
+            <Row label="Total à payer"
               value={
-                <span className="font-bold text-base" style={{ color: AC }}>
+                <span className="font-bold text-base" style={{ color: TX }}>
                   {partPatient.toLocaleString()} XOF
                 </span>
               } />
+            {!!dossier.statutAssurance && hasAssurance && (
+              <p className="text-xs mt-2 pt-2 border-t" style={{ borderColor: BD, color: TL }}>
+                Remboursement possible après validation assurance.
+              </p>
+            )}
             {paiements.length > 0 && (
               <div className="mt-3 pt-3 border-t" style={{ borderColor: BD }}>
                 {paiements.map(p => (
@@ -358,7 +437,7 @@ export default function PatientDetail() {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ background: BG }}>
-                    {['Code', 'Examen', 'Tarif', 'Couverture', 'Part patient'].map(h => (
+                    {['Code', 'Examen', 'Tarif', ...(dossier.statutAssurance ? ['Couverture', 'Part patient'] : [])].map(h => (
                       <th key={h} className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-wide"
                         style={{ color: TL }}>{h}</th>
                     ))}
@@ -366,8 +445,14 @@ export default function PatientDetail() {
                 </thead>
                 <tbody>
                   {examens.map((e, i) => {
-                    const couvert    = e.couvert === true
-                    const partPat    = couvert ? Math.round(e.tarif * 0.2) : e.tarif
+                    // La part patient n'est calculable qu'après validation assurance
+                    const assuranceValidee =
+                      dossier.statutAssurance === 'VALIDE_TOTAL' ||
+                      dossier.statutAssurance === 'VALIDE_PARTIEL'
+                    const couvert = e.couvert === true
+                    const partPat = couvert ? Math.round(e.tarif * 0.2) : e.tarif
+                    // Afficher la part seulement si assurance validée et couverture connue
+                    const showPartPat = assuranceValidee && e.couvert !== null && e.couvert !== undefined
                     return (
                       <tr key={e.id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BD}` }}>
                         <td className="px-3 py-2.5 font-mono text-xs font-bold" style={{ color: P }}>
@@ -379,18 +464,22 @@ export default function PatientDetail() {
                         <td className="px-3 py-2.5 text-right font-mono text-xs">
                           {e.tarif.toLocaleString()}
                         </td>
-                        <td className="px-3 py-2.5">
-                          {e.couvert === null || e.couvert === undefined ? (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
-                          ) : couvert ? (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#D1FAE5', color: '#065F46' }}>Couvert 80%</span>
-                          ) : (
-                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: AC }}>
-                          {partPat.toLocaleString()}
-                        </td>
+                        {dossier.statutAssurance && (
+                          <td className="px-3 py-2.5">
+                            {e.couvert === null || e.couvert === undefined ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEF3C7', color: '#92400E' }}>En attente</span>
+                            ) : couvert ? (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#D1FAE5', color: '#065F46' }}>Couvert 80%</span>
+                            ) : (
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#FEE2E2', color: '#991B1B' }}>Non couvert</span>
+                            )}
+                          </td>
+                        )}
+                        {dossier.statutAssurance && (
+                          <td className="px-3 py-2.5 text-right font-mono text-xs font-bold" style={{ color: showPartPat ? TX : TL }}>
+                            {showPartPat ? partPat.toLocaleString() : '—'}
+                          </td>
+                        )}
                       </tr>
                     )
                   })}
@@ -486,7 +575,7 @@ export default function PatientDetail() {
           {/* Note admin */}
           {dossier.noteAdmin && (
             <Card title="Note administrative">
-              <p className="text-sm" style={{ color: TX }}>{dossier.noteAdmin}</p>
+              {renderNoteAdmin()}
             </Card>
           )}
         </div>

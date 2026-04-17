@@ -47,10 +47,10 @@ function ModalNouveauDossier({
     try {
       // 1. Créer le patient
       const patient = await patientsService.create({
-        nom:        form.nom.trim(),
-        prenom:     form.prenom.trim(),
+        nom:        form.nom.toUpperCase().trim(),
+        prenom:     form.prenom.toUpperCase().trim(),
         telephone:  form.telephone.trim(),
-        commune:    form.commune,
+        commune:    form.commune.toUpperCase().trim(),
         ...(form.assuranceId ? { assuranceId: form.assuranceId } : {}),
       })
       // 2. Créer le dossier lié
@@ -95,9 +95,9 @@ function ModalNouveauDossier({
               </label>
               <input
                 value={form.nom}
-                onChange={e => set('nom', e.target.value)}
+                onChange={e => set('nom', e.target.value.toUpperCase())}
                 placeholder="KONÉ"
-                className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+                className="w-full border rounded-lg px-3 py-2 text-sm outline-none uppercase"
                 style={{ borderColor: '#D4E5E1', color: '#1A2B26' }}
               />
             </div>
@@ -107,9 +107,9 @@ function ModalNouveauDossier({
               </label>
               <input
                 value={form.prenom}
-                onChange={e => set('prenom', e.target.value)}
-                placeholder="Aminata"
-                className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
+                onChange={e => set('prenom', e.target.value.toUpperCase())}
+                placeholder="AMINATA"
+                className="w-full border rounded-lg px-3 py-2 text-sm outline-none uppercase"
                 style={{ borderColor: '#D4E5E1', color: '#1A2B26' }}
               />
             </div>

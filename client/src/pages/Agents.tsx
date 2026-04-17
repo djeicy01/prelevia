@@ -72,8 +72,8 @@ function ModalAgent({
     setSaving(true)
     setError(null)
     const payload = {
-      prenom:         form.prenom.trim(),
-      nom:            form.nom.trim(),
+      prenom:         form.prenom.toUpperCase().trim(),
+      nom:            form.nom.toUpperCase().trim(),
       telephone:      form.telephone.trim(),
       commune:        form.commune,
       email:          form.email.trim() || undefined,
@@ -109,15 +109,17 @@ function ModalAgent({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: TX }}>Prénom *</label>
-              <input value={form.prenom} onChange={set('prenom')}
-                className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ borderColor: BD, color: TX }} placeholder="Kouassi" />
+              <input value={form.prenom}
+                onChange={e => setForm(f => ({ ...f, prenom: e.target.value.toUpperCase() }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm outline-none uppercase"
+                style={{ borderColor: BD, color: TX }} placeholder="KOUASSI" />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: TX }}>Nom *</label>
-              <input value={form.nom} onChange={set('nom')}
-                className="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ borderColor: BD, color: TX }} placeholder="Bernard" />
+              <input value={form.nom}
+                onChange={e => setForm(f => ({ ...f, nom: e.target.value.toUpperCase() }))}
+                className="w-full border rounded-lg px-3 py-2 text-sm outline-none uppercase"
+                style={{ borderColor: BD, color: TX }} placeholder="BERNARD" />
             </div>
           </div>
 

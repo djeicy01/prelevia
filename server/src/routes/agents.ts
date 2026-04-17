@@ -164,7 +164,12 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     }
 
     const agent = await prisma.agent.create({
-      data: { nom, prenom, telephone, email, commune, statut, tauxCommission },
+      data: {
+        nom:     String(nom).toUpperCase().trim(),
+        prenom:  String(prenom).toUpperCase().trim(),
+        commune: String(commune).toUpperCase().trim(),
+        telephone, email, statut, tauxCommission,
+      },
     })
 
     res.status(201).json(agent)
@@ -197,11 +202,11 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
     }
 
     const data: any = {}
-    if (nom           !== undefined) data.nom           = nom
-    if (prenom        !== undefined) data.prenom        = prenom
+    if (nom           !== undefined) data.nom           = String(nom).toUpperCase().trim()
+    if (prenom        !== undefined) data.prenom        = String(prenom).toUpperCase().trim()
     if (telephone     !== undefined) data.telephone     = telephone
     if (email         !== undefined) data.email         = email
-    if (commune       !== undefined) data.commune       = commune
+    if (commune       !== undefined) data.commune       = String(commune).toUpperCase().trim()
     if (statut        !== undefined) data.statut        = statut
     if (tauxCommission !== undefined) data.tauxCommission = tauxCommission
 

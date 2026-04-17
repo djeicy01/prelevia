@@ -85,6 +85,17 @@ export default function Login() {
         <p className="text-center text-xs mt-6" style={{ color: '#5C7A74' }}>
           Labo Maison Blanche · Yopougon, Abidjan
         </p>
+
+        <div className="mt-5 pt-5 border-t text-center" style={{ borderColor: '#D4E5E1' }}>
+          <p className="text-xs mb-2" style={{ color: '#5C7A74' }}>Vous êtes un laboratoire partenaire ?</p>
+          <a
+            href="/labo/login"
+            className="text-xs font-semibold transition-opacity hover:opacity-70"
+            style={{ color: '#0A6E5C' }}
+          >
+            → Accéder au portail laboratoire
+          </a>
+        </div>
       </div>
     </div>
   )
